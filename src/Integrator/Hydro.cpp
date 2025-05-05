@@ -290,6 +290,9 @@ void Hydro::Advance(int lev, Set::Scalar time, Set::Scalar dt)
 
         Set::Patch<Set::Scalar>       v         = velocity_mf.Patch(lev,mfi);
         Set::Patch<Set::Scalar>       p         = pressure_mf.Patch(lev,mfi);
+        Set::Patch<Set::Scalar>       rho_fluid = pressure_mf.Patch(lev,mfi);
+        Set::Patch<Set::Scalar>       M_fluid   = pressure_mf.Patch(lev,mfi);
+        Set::Patch<Set::Scalar>       E_fluid   = pressure_mf.Patch(lev,mfi);
 
         amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k)
         {
@@ -362,6 +365,7 @@ void Hydro::Advance(int lev, Set::Scalar time, Set::Scalar dt)
 
             Set::Vector normal = grad_eta/(grad_eta_mag + small);
             Set::Vector Momentum ( M(i,j,k,0), M(i,j,k,1) );
+            //Set::Scalar mdot0 = (m0(i,j,k)/* - Momentum.dot(normal)*/) * grad_eta_mag;
             Set::Scalar mdot0 = (m0(i,j,k) - Momentum.dot(normal)) * grad_eta_mag;
             Set::Vector Pdot0 = (u*u.transpose()*rho(i,j,k) - u0*Momentum.transpose())*grad_eta;
             //Pdot0 = mdot0*u0 + (-M_fluid.dot(u) + pref)*grad_eta;
@@ -530,6 +534,30 @@ void Hydro::Advance(int lev, Set::Scalar time, Set::Scalar dt)
                     etadot(i,j,k)*(E(i,j,k) - E_solid(i,j,k)) / (eta(i,j,k)+small)
                     ) * dt;
 
+            double check_tol = 1e-6;
+            if ((fabs(rho_new(i,j,k) - rho(i,j,k)) >= check_tol) || (fabs(M_new(i,j,k,0) - M(i,j,k,0)) >= check_tol) ||
+                (fabs(M_new(i,j,k,1) - M(i,j,k,1)) >= check_tol) || (fabs(E_new(i,j,k) - E(i,j,k))     >= check_tol)) {
+              Util::ParallelMessage(INFO,"time=",time);
+              Util::ParallelMessage(INFO,"i,j,k=\t",i,"\t",j,"\t",k,"\n");
+              Util::ParallelMessage(INFO,"drho=",rho_new(i,j,k) - rho(i,j,k));
+              Util::ParallelMessage(INFO,"drhof_dt",drhof_dt);
+              Util::ParallelMessage(INFO,"etadot term:",etadot(i,j,k) * (rho(i,j,k) - rho_solid(i,j,k)) / (eta(i,j,k) + small));
+              Util::ParallelMessage(INFO,"mflux_x:",(flux_xlo.mass - flux_xhi.mass) / DX[0]);
+              Util::ParallelMessage(INFO,"mflux_y:",(flux_ylo.mass - flux_yhi.mass) / DX[1]);
+              Util::ParallelMessage(INFO,"source0:",Source(i, j, k, 0));
+
+              Util::ParallelMessage(INFO,"dMx=",M_new(i,j,k,0) - M(i,j,k,0));
+              Util::ParallelMessage(INFO,"dMy=",M_new(i,j,k,1) - M(i,j,k,1));
+              Util::ParallelMessage(INFO,"dE=",E_new(i,j,k) - E(i,j,k));
+              Util::ParallelMessage(INFO,"dEf_dt",dEf_dt);
+              Util::ParallelMessage(INFO,"etadot term:",etadot(i,j,k)*(E(i,j,k) - E_solid(i,j,k)) / (eta(i,j,k)+small));
+              Util::ParallelMessage(INFO,"etadot:",etadot(i,j,k),"\t",(E(i,j,k) - E_solid(i,j,k)));
+              Util::ParallelMessage(INFO,"Eflux_x:",(flux_xlo.energy - flux_xhi.energy) / DX[0]);
+              Util::ParallelMessage(INFO,"Eflux_y:",(flux_ylo.energy - flux_yhi.energy) / DX[1]);
+              Util::ParallelMessage(INFO,"source3:",Source(i, j, k, 3));
+              
+              //Util::Abort(INFO);
+            }
 
             if (eta(i,j,k) < cutoff)
             {

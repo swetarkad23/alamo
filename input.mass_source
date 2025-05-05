@@ -13,8 +13,8 @@ plot_file = output.mass_source
 
 ### MESHING ###
 
-amr.plot_dt = 1E-2
-#amr.plot_int = 100
+#amr.plot_dt = 1E-2
+amr.plot_int = 1
 amr.max_grid_size = 500000
 amr.blocking_factor = 2
 amr.regrid_int = 100
@@ -22,7 +22,7 @@ amr.grid_eff = 0.8
 amr.n_cell = 64 8 0
 
 # Uncomment to test AMR
-amr.max_level = 3
+amr.max_level = 0
 #amr.n_cell = 128 32 0
 
 ### DIMENSIONS ###
@@ -53,7 +53,7 @@ u0.ic.expression.region0 = "-1.0"
 u0.ic.expression.region1 = "0.0"
 
 q0.ic.type = expression
-q0.ic.expression.region0 = "-(101325.0/(1.4-1.0) + 1.225/2.0)"
+q0.ic.expression.region0 = "101325.0/(1.4-1.0) + 1.225/2.0"
 
 eta.ic.type = expression
 eta.ic.expression.constant.eps   = 0.05
@@ -88,7 +88,7 @@ solid.momentum.ic.expression.region0 = "-1.225"
 solid.momentum.ic.expression.region1 = "0.0"
 
 solid.energy.ic.type = expression
-solid.energy.ic.expression.region0 = "0.0" 
+solid.energy.ic.expression.region0 = "101325.0/(1.4-1.0) + 1.225/2.0"
 
 ### ETA BC  ###
 
