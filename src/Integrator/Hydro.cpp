@@ -214,14 +214,15 @@ void Hydro::Mix(int lev)
         {  
             rho(i, j, k) = eta(i, j, k) * rho(i, j, k) + (1.0 - eta(i, j, k)) * rho_solid(i, j, k);
             rho_old(i, j, k) = rho(i, j, k);
+            Set::Scalar rho_fluid = (rho(i,j,k) - (1.0 - eta(i,j,k))*rho_solid(i,j,k))/(eta(i,j,k) + small);
 
-            M(i, j, k, 0) = (rho(i, j, k)*v(i, j, k, 0))*eta(i, j, k)  +  M_solid(i, j, k, 0)*(1.0-eta(i, j, k));
-            M(i, j, k, 1) = (rho(i, j, k)*v(i, j, k, 1))*eta(i, j, k)  +  M_solid(i, j, k, 1)*(1.0-eta(i, j, k));
+            M(i, j, k, 0) = (rho_fluid*v(i, j, k, 0))*eta(i, j, k)  +  M_solid(i, j, k, 0)*(1.0-eta(i, j, k));
+            M(i, j, k, 1) = (rho_fluid*v(i, j, k, 1))*eta(i, j, k)  +  M_solid(i, j, k, 1)*(1.0-eta(i, j, k));
             M_old(i, j, k, 0) = M(i, j, k, 0);
             M_old(i, j, k, 1) = M(i, j, k, 1);
 
             E(i, j, k) =
-                (0.5 * (v(i, j, k, 0) * v(i, j, k, 0) + v(i, j, k, 1) * v(i, j, k, 1)) * rho(i, j, k) + p(i, j, k) / (gamma - 1.0)) * eta(i, j, k) 
+                (0.5 * (v(i, j, k, 0) * v(i, j, k, 0) + v(i, j, k, 1) * v(i, j, k, 1)) * rho_fluid + p(i, j, k) / (gamma - 1.0)) * eta(i, j, k) 
                 + 
                 E_solid(i, j, k) * (1.0 - eta(i, j, k));
             E_old(i, j, k) = E(i, j, k);
@@ -462,7 +463,7 @@ void Hydro::Advance(int lev, Set::Scalar time, Set::Scalar dt)
 
             rho_new(i, j, k) = rho(i, j, k) + 
                 (
-                    drhof_dt +
+                    drhof_dt * 0.0 +
                     // todo add drhos_dt term if want time-evolving rhos
                     etadot(i,j,k) * (rho(i,j,k) - rho_solid(i,j,k)) / (eta(i,j,k) + small)
                     ) * dt;
@@ -503,7 +504,7 @@ void Hydro::Advance(int lev, Set::Scalar time, Set::Scalar dt)
 
             M_new(i, j, k, 0) = M(i, j, k, 0) +
                 ( 
-                    dMxf_dt + 
+                    dMxf_dt * eta(i,j,k) + 
                     // todo add dMs_dt term if want time-evolving Ms
                     etadot(i,j,k)*(M(i,j,k,0) - M_solid(i,j,k,0)) / (eta(i,j,k) + small)
                     ) * dt;
@@ -517,7 +518,7 @@ void Hydro::Advance(int lev, Set::Scalar time, Set::Scalar dt)
                 
             M_new(i, j, k, 1) = M(i, j, k, 1) +
                 ( 
-                    dMyf_dt +
+                    dMyf_dt * eta(i,j,k) +
                     // todo add dMs_dt term if want time-evolving Ms
                     etadot(i,j,k)*(M(i,j,k,1) - M_solid(i,j,k,1)) / (eta(i,j,k)+small)
                     )*dt;
@@ -529,7 +530,7 @@ void Hydro::Advance(int lev, Set::Scalar time, Set::Scalar dt)
 
             E_new(i, j, k) = E(i, j, k) +
                 ( 
-                    dEf_dt +
+                    dEf_dt * 0.0 +
                     // todo add dEs_dt term if want time-evolving Es
                     etadot(i,j,k)*(E(i,j,k) - E_solid(i,j,k)) / (eta(i,j,k)+small)
                     ) * dt;
@@ -538,7 +539,7 @@ void Hydro::Advance(int lev, Set::Scalar time, Set::Scalar dt)
             if ((fabs(rho_new(i,j,k) - rho(i,j,k)) >= check_tol) || (fabs(M_new(i,j,k,0) - M(i,j,k,0)) >= check_tol) ||
                 (fabs(M_new(i,j,k,1) - M(i,j,k,1)) >= check_tol) || (fabs(E_new(i,j,k) - E(i,j,k))     >= check_tol)) {
               Util::ParallelMessage(INFO,"time=",time);
-              Util::ParallelMessage(INFO,"i,j,k=\t",i,"\t",j,"\t",k,"\n");
+              Util::ParallelMessage(INFO,"i,j,k=\t",i,"\t",j,"\t",k);
               Util::ParallelMessage(INFO,"drho=",rho_new(i,j,k) - rho(i,j,k));
               Util::ParallelMessage(INFO,"drhof_dt",drhof_dt);
               Util::ParallelMessage(INFO,"etadot term:",etadot(i,j,k) * (rho(i,j,k) - rho_solid(i,j,k)) / (eta(i,j,k) + small));
@@ -547,14 +548,21 @@ void Hydro::Advance(int lev, Set::Scalar time, Set::Scalar dt)
               Util::ParallelMessage(INFO,"source0:",Source(i, j, k, 0));
 
               Util::ParallelMessage(INFO,"dMx=",M_new(i,j,k,0) - M(i,j,k,0));
+              Util::ParallelMessage(INFO,"dMxf_dt",drhof_dt);
+              Util::ParallelMessage(INFO,"etadot term:",etadot(i,j,k) * (M(i,j,k,0) - M_solid(i,j,k,0)) / (eta(i,j,k) + small));
+              Util::ParallelMessage(INFO,"momflux_x:",(flux_xlo.momentum_normal - flux_xhi.momentum_normal) / DX[0]);
+              Util::ParallelMessage(INFO,"momflux_y:",(flux_ylo.momentum_tangent - flux_yhi.momentum_tangent) / DX[1]);
+              Util::ParallelMessage(INFO,"source1:",Source(i, j, k, 1));
+
               Util::ParallelMessage(INFO,"dMy=",M_new(i,j,k,1) - M(i,j,k,1));
+
               Util::ParallelMessage(INFO,"dE=",E_new(i,j,k) - E(i,j,k));
               Util::ParallelMessage(INFO,"dEf_dt",dEf_dt);
               Util::ParallelMessage(INFO,"etadot term:",etadot(i,j,k)*(E(i,j,k) - E_solid(i,j,k)) / (eta(i,j,k)+small));
               Util::ParallelMessage(INFO,"etadot:",etadot(i,j,k),"\t",(E(i,j,k) - E_solid(i,j,k)));
               Util::ParallelMessage(INFO,"Eflux_x:",(flux_xlo.energy - flux_xhi.energy) / DX[0]);
               Util::ParallelMessage(INFO,"Eflux_y:",(flux_ylo.energy - flux_yhi.energy) / DX[1]);
-              Util::ParallelMessage(INFO,"source3:",Source(i, j, k, 3));
+              Util::ParallelMessage(INFO,"source3:",Source(i, j, k, 3),"\n");
               
               //Util::Abort(INFO);
             }
