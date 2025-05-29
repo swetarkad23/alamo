@@ -2,19 +2,19 @@
 #define INTEGRATOR_AGGLOMERATION_H
 
 #include "IO/ParmParse.H"
-#include "Integrator/Integrator.H"
+#include "Integrator/Flame.H"
 
 namespace Integrator
 {
 
-class Agglomeration : public Integrator
+class Agglomeration : public Flame
 {
 
 public:
     static constexpr const char *name = "agglomeration";
 
-    Agglomeration();
-    ~Agglomeration();
+    Agglomeration() = default;
+    ~Agglomeration() = default;
     Agglomeration(IO::ParmParse &pp) : Agglomeration() { Parse(*this, pp); };
 
     static void Parse(Agglomeration &value, IO::ParmParse &pp);
