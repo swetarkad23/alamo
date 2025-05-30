@@ -16,7 +16,7 @@
 // where :math:`\kappa` is a parameter. The free energy is
 //
 // .. math::
-//    F[\alpha] = \int_\Omega(W_c[\alpha]+W_B[\alpha])\mathrm{d}\bm{x}.
+//    F[\alpha] = \int_\Omega(W_c[\alpha]+W_B[\alpha])\mathrm{d}\boldsymbol{x}.
 //
 // The effective mobility :math:`L` is defined as
 //
@@ -30,7 +30,7 @@
 // kinetics:
 //
 // .. math::
-//    \frac{\partial\alpha}{\partial t} = L\Delta]\left(\frac{\delta F}{\delta\alpha}\right)
+//    \frac{\partial\alpha}{\partial t} = L\Delta\left(\frac{\delta F}{\delta\alpha}\right)
 
 #ifndef INTEGRATOR_AGGLOMERATION_H
 #define INTEGRATOR_AGGLOMERATION_H
