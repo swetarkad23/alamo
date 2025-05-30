@@ -60,6 +60,10 @@ private:
     Set::Scalar kappa = NAN;
     Set::Scalar L0 = NAN;
     Set::Scalar n = NAN;
+
+    BC::BC<Set::Scalar> *bc_alpha = nullptr;
+
+    int ghost_count = -1;
 };
 }
 

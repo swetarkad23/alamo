@@ -1,4 +1,5 @@
 #include "Agglomeration.H"
+#include "BC/Constant.H"
 #include "IO/ParmParse.H"
 
 namespace Integrator
@@ -14,5 +15,10 @@ Agglomeration::Parse(Agglomeration &value, IO::ParmParse &pp)
     pp.query_default("L0", value.L0, 0.5);
     // Agglomeration mobility exponent
     pp.query_default("n", value.n, 2.0);
+
+    // Boundary conditions for aluminum phase order pamarater aluminum
+    // order parameter
+    pp.select_default<BC::Constant>("alpha.bc", value.bc_alpha, 1);
+    value.RegisterNewFab(value.alpha_mf, value.bc_alpha, 1, value.ghost_count, "alpha", true);
 }
 }
