@@ -1,4 +1,8 @@
+#include <utility>
+
 #include "Agglomeration.H"
+#include "Flame.H"
+
 #include "BC/Constant.H"
 #include "IC/BMP.H"
 #include "IC/Constant.H"
@@ -7,7 +11,12 @@
 #include "IO/ParmParse.H"
 #include "Set/Base.H"
 
-#include "Flame.H"
+#include "AMReX_Array4.H"
+#include "AMReX_Box.H"
+#include "AMReX_GpuLaunchFunctsC.H"
+#include "AMReX_GpuQualifiers.H"
+#include "AMReX_MFIter.H"
+#include "AMReX_REAL.H"
 
 namespace Integrator
 {
@@ -46,7 +55,17 @@ void
 Agglomeration::Advance(int lev, Set::Scalar time, Set::Scalar dt)
 {
     Flame::Advance(lev, time, dt);
+    std::swap(alphaold_agglom_mf[lev], alphanew_agglom_mf[lev]);
     const Set::Scalar *DX = geom[lev].CellSize();
-    // TODO: Implement Cahn-Hilliard agglomeration kinetics
+    for (amrex::MFIter mfi(*alphanew_agglom_mf[lev], true); mfi.isValid(); ++mfi)
+    {
+        const amrex::Box &bx = mfi.tilebox();
+        amrex::Array4<const amrex::Real> const &alpha_agglom = alphaold_agglom_mf[lev]->array(mfi);
+        amrex::Array4<amrex::Real> const &alphanew_agglom = alphanew_agglom_mf[lev]->array(mfi);
+
+        amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
+            // do math
+        });
+    }
 }
 }
