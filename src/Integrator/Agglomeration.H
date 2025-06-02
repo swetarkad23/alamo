@@ -35,8 +35,11 @@
 #ifndef INTEGRATOR_AGGLOMERATION_H
 #define INTEGRATOR_AGGLOMERATION_H
 
+#include "BC/BC.H"
+#include "IC/IC.H"
 #include "IO/ParmParse.H"
 #include "Integrator/Flame.H"
+#include "Set/Base.H"
 
 namespace Integrator
 {
@@ -53,18 +56,21 @@ public:
 
     static void Parse(Agglomeration &value, IO::ParmParse &pp);
 
-private:
-    Set::Field<Set::Scalar> alpha_mf;
+protected:
+    void Initialize(int lev) override;
+    void Advance(int lev, Set::Scalar time, Set::Scalar dt) override;
 
-    Set::Scalar gamma = NAN;
-    Set::Scalar kappa = NAN;
+private:
+    Set::Field<Set::Scalar> alphaold_agglom_mf;
+    Set::Field<Set::Scalar> alphanew_agglom_mf;
+
+    Set::Scalar gamma_agglom = NAN;
+    Set::Scalar kappa_agglom = NAN;
     Set::Scalar L0 = NAN;
     Set::Scalar n = NAN;
 
-    BC::BC<Set::Scalar> *bc_alpha = nullptr;
-
-    int ghost_count = -1;
+    BC::BC<Set::Scalar> *bc_alpha_agglom = nullptr;
+    IC::IC<Set::Scalar> *ic_alpha_agglom = nullptr;
 };
 }
-
 #endif
