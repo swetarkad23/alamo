@@ -1,3 +1,4 @@
+#include <cmath>
 #include <utility>
 
 #include "Agglomeration.H"
@@ -40,7 +41,7 @@ Agglomeration::Parse(Agglomeration &value, IO::ParmParse &pp)
     pp.select_default<IC::Constant, IC::Expression, IC::BMP, IC::PNG>("alpha_agglom.ic", value.ic_alpha_agglom, value.geom);
 
     value.RegisterNewFab(value.alphaold_agglom_mf, value.bc_alpha_agglom, 1, 1, "alpha_agglom_old", false);
-    value.RegisterNewFab(value.alphanew_agglom_mf, value.bc_alpha_agglom, 1, 1, "alpha_agglom", true);
+    value.RegisterNewFab(value.alpha_agglom_mf, value.bc_alpha_agglom, 1, 1, "alpha_agglom", true);
 };
 
 void
@@ -48,23 +49,27 @@ Agglomeration::Initialize(int lev)
 {
     Flame::Initialize(lev);
     ic_alpha_agglom->Initialize(lev, alphaold_agglom_mf);
-    ic_alpha_agglom->Initialize(lev, alphanew_agglom_mf);
+    ic_alpha_agglom->Initialize(lev, alpha_agglom_mf);
 }
 
 void
 Agglomeration::Advance(int lev, Set::Scalar time, Set::Scalar dt)
 {
     Flame::Advance(lev, time, dt);
-    std::swap(alphaold_agglom_mf[lev], alphanew_agglom_mf[lev]);
+    std::swap(alphaold_agglom_mf[lev], alpha_agglom_mf[lev]);
     const Set::Scalar *DX = geom[lev].CellSize();
-    for (amrex::MFIter mfi(*alphanew_agglom_mf[lev], true); mfi.isValid(); ++mfi)
+    for (amrex::MFIter mfi(*alpha_agglom_mf[lev], true); mfi.isValid(); ++mfi)
     {
         const amrex::Box &bx = mfi.tilebox();
-        amrex::Array4<const amrex::Real> const &alpha_agglom = alphaold_agglom_mf[lev]->array(mfi);
-        amrex::Array4<amrex::Real> const &alphanew_agglom = alphanew_agglom_mf[lev]->array(mfi);
+        amrex::Array4<const amrex::Real> const &alphaold_agglom = alphaold_agglom_mf[lev]->array(mfi);
+        amrex::Array4<amrex::Real> const &alpha_agglom = alpha_agglom_mf[lev]->array(mfi);
+        amrex::Array4<amrex::Real> const &etanew = eta_mf[lev]->array(mfi);
 
         amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
-            // do math
+            // calculate effective mobility L
+            Set::Scalar L = L0 * std::pow(1 - etanew(i, j, k), n);
+
+            alpha_agglom(i, j, k) = alphaold_agglom(i, j, k) + dt * L * laplacian; // Cahn-Hilliard equation
         });
     }
 }

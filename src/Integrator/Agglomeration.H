@@ -62,7 +62,7 @@ protected:
 
 private:
     Set::Field<Set::Scalar> alphaold_agglom_mf;
-    Set::Field<Set::Scalar> alphanew_agglom_mf;
+    Set::Field<Set::Scalar> alpha_agglom_mf;
 
     Set::Scalar gamma_agglom = NAN;
     Set::Scalar kappa_agglom = NAN;
