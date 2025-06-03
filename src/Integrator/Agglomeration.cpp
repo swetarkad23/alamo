@@ -43,6 +43,7 @@ Agglomeration::Parse(Agglomeration &value, IO::ParmParse &pp)
 
     value.RegisterNewFab(value.alphaold_agglom_mf, value.bc_alpha_agglom, 1, 1, "alpha_agglom_old", false);
     value.RegisterNewFab(value.alpha_agglom_mf, value.bc_alpha_agglom, 1, 1, "alpha_agglom", true);
+    value.RegisterNewFab(value.free_energy_agglom_derivative_mf, value.bc_alpha_agglom, 1, 1, "free_energy_agglom_derivative", false);
 };
 
 void
