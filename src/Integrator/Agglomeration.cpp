@@ -13,6 +13,7 @@
 #include "IO/ParmParse.H"
 #include "Numeric/Stencil.H"
 #include "Set/Base.H"
+#include "Set/Set.H"
 
 #include "AMReX_Array4.H"
 #include "AMReX_Box.H"
@@ -20,6 +21,8 @@
 #include "AMReX_GpuQualifiers.H"
 #include "AMReX_MFIter.H"
 #include "AMReX_REAL.H"
+#include "AMReX_SPACE.H"
+#include "AMReX_TagBox.H"
 
 namespace Integrator
 {
@@ -37,10 +40,13 @@ Agglomeration::Parse(Agglomeration &value, IO::ParmParse &pp)
     // Agglomeration mobility exponent
     pp.query_default("n", value.agglom.n, 1.0);
 
-    // Boundary conditions for agglomerate order parameter
-    pp.select_default<BC::Constant>("alpha_agglom.bc", value.bc_alpha_agglom, 1);
+    // Regridding criterion
+    pp.query_default("refinement_threshold", value.refinement_threshold, 1e100);
+
     // Initial conditions for agglomerate order parameter
     pp.select_default<IC::Constant, IC::Expression, IC::BMP, IC::PNG, IC::Random>("alpha_agglom.ic", value.ic_alpha_agglom, value.geom);
+    // Boundary conditions for agglomerate order parameter
+    pp.select_default<BC::Constant>("alpha_agglom.bc", value.bc_alpha_agglom, 1);
 
     value.RegisterNewFab(value.alphaold_agglom_mf, value.bc_alpha_agglom, 1, 1, "alpha_agglom_old", false);
     value.RegisterNewFab(value.alpha_agglom_mf, value.bc_alpha_agglom, 1, 1, "alpha_agglom", true);
@@ -86,6 +92,28 @@ Agglomeration::Advance(int lev, Set::Scalar time, Set::Scalar dt)
 
             // Cahn-Hilliard equation
             alpha_agglom(i, j, k) = alphaold_agglom(i, j, k) + dt * L * laplacian;
+        });
+    }
+}
+
+void
+Agglomeration::TagCellsForRefinement(int lev, amrex::TagBoxArray &a_tags, amrex::Real time, int ngrow)
+{
+    Flame::TagCellsForRefinement(lev, a_tags, time, ngrow);
+
+    const Set::Scalar *DX = geom[lev].CellSize();
+    Set::Scalar dr = sqrt(AMREX_D_TERM(DX[0] * DX[0], +DX[1] * DX[1], +DX[2] * DX[2]));
+
+    for (amrex::MFIter mfi(*alpha_agglom_mf[lev], amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
+    {
+        const amrex::Box &bx = mfi.tilebox();
+        amrex::Array4<char> const &tags = a_tags.array(mfi);
+        Set::Patch<const Set::Scalar> alpha_agglom = (*alpha_agglom_mf[lev]).array(mfi);
+
+        amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
+            Set::Vector grad = Numeric::Gradient(alpha_agglom, i, j, k, 0, DX);
+            if (grad.lpNorm<2>() * dr > refinement_threshold)
+                tags(i, j, k) = amrex::TagBox::SET;
         });
     }
 }

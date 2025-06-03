@@ -22,7 +22,15 @@ stop_time = 0.11
 
 # agglomeration stuff
 
-alpha_agglom.ic.type = random
+gamma = 0.0005
+kappa = 1.0
+L0 = 1.0
+n = 1.0
+
+refinement_threshold = 0.0001
+
+alpha_agglom.ic.type = constant
+alpha_agglom.ic.constant.value = 0.15
 
 alpha_agglom.bc.type = constant
 alpha_agglom.bc.constant.type.xlo = dirichlet

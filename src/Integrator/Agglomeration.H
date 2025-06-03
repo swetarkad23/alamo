@@ -41,6 +41,9 @@
 #include "Integrator/Flame.H"
 #include "Set/Base.H"
 
+#include "AMReX_REAL.H"
+#include "AMReX_TagBox.H"
+
 namespace Integrator
 {
 
@@ -59,6 +62,7 @@ public:
 protected:
     void Initialize(int lev) override;
     void Advance(int lev, Set::Scalar time, Set::Scalar dt) override;
+    void TagCellsForRefinement(int lev, amrex::TagBoxArray &a_tags, amrex::Real time, int ngrow) override;
 
 private:
     Set::Field<Set::Scalar> alphaold_agglom_mf;
@@ -73,8 +77,10 @@ private:
         Set::Scalar n = NAN;
     } agglom;
 
-    BC::BC<Set::Scalar> *bc_alpha_agglom = nullptr;
+    Set::Scalar refinement_threshold = NAN;
+
     IC::IC<Set::Scalar> *ic_alpha_agglom = nullptr;
+    BC::BC<Set::Scalar> *bc_alpha_agglom = nullptr;
 };
 }
 #endif
