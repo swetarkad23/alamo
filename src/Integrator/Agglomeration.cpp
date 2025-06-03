@@ -74,7 +74,7 @@ Agglomeration::Advance(int lev, Set::Scalar time, Set::Scalar dt)
         amrex::Array4<const amrex::Real> const &alphaold_agglom = alphaold_agglom_mf[lev]->array(mfi);
         amrex::Array4<amrex::Real> const &alpha_agglom = alpha_agglom_mf[lev]->array(mfi);
         amrex::Array4<amrex::Real> const &free_energy_agglom_derivative = free_energy_agglom_derivative_mf[lev]->array(mfi);
-        amrex::Array4<amrex::Real> const &etanew = eta_mf[lev]->array(mfi);
+        amrex::Array4<amrex::Real> const &eta = eta_mf[lev]->array(mfi);
 
         amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
             Set::Scalar laplacian_alpha = Numeric::Laplacian(alphaold_agglom, i, j, k, 0, DX);
@@ -88,7 +88,7 @@ Agglomeration::Advance(int lev, Set::Scalar time, Set::Scalar dt)
             Set::Scalar laplacian = Numeric::Laplacian(free_energy_agglom_derivative, i, j, k, 0, DX);
 
             // calculate effective mobility L
-            Set::Scalar L = agglom.L0 * std::pow(1 - etanew(i, j, k), agglom.n);
+            Set::Scalar L = agglom.L0 * std::pow(1 - eta(i, j, k), agglom.n);
 
             // Cahn-Hilliard equation
             alpha_agglom(i, j, k) = alphaold_agglom(i, j, k) + dt * L * laplacian;

@@ -22,21 +22,21 @@ stop_time = 0.11
 
 # agglomeration stuff
 
-gamma = 0.0005
+gamma = 1.0
 kappa = 1.0
 L0 = 1.0
 n = 1.0
 
-refinement_threshold = 0.0001
+refinement_threshold = 0.01
 
 alpha_agglom.ic.type = constant
 alpha_agglom.ic.constant.value = 0.15
 
 alpha_agglom.bc.type = constant
-alpha_agglom.bc.constant.type.xlo = dirichlet
-alpha_agglom.bc.constant.type.xhi = dirichlet
-alpha_agglom.bc.constant.type.ylo = dirichlet
-alpha_agglom.bc.constant.type.yhi = dirichlet
+alpha_agglom.bc.constant.type.xlo = neumann
+alpha_agglom.bc.constant.type.xhi = neumann
+alpha_agglom.bc.constant.type.ylo = neumann
+alpha_agglom.bc.constant.type.yhi = neumann
 alpha_agglom.bc.constant.val.xlo = 0.0
 alpha_agglom.bc.constant.val.xhi = 0.0
 alpha_agglom.bc.constant.val.ylo = 0.0
