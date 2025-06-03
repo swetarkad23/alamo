@@ -22,18 +22,17 @@ stop_time = 0.11
 
 # agglomeration stuff
 
-alpha_agglom.ic.type = constant
-alpha_agglom.ic.constant.value = 0.5
+alpha_agglom.ic.type = random
 
 alpha_agglom.bc.type = constant
 alpha_agglom.bc.constant.type.xlo = dirichlet
 alpha_agglom.bc.constant.type.xhi = dirichlet
 alpha_agglom.bc.constant.type.ylo = dirichlet
 alpha_agglom.bc.constant.type.yhi = dirichlet
-alpha_agglom.bc.constant.val.xlo = 0.5
-alpha_agglom.bc.constant.val.xhi = 0.5
-alpha_agglom.bc.constant.val.ylo = 0.5
-alpha_agglom.bc.constant.val.yhi = 0.5
+alpha_agglom.bc.constant.val.xlo = 0.0
+alpha_agglom.bc.constant.val.xhi = 0.0
+alpha_agglom.bc.constant.val.ylo = 0.0
+alpha_agglom.bc.constant.val.yhi = 0.0
 
 # end agglomeration stuff
 

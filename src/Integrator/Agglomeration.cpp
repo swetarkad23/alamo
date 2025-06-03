@@ -9,6 +9,7 @@
 #include "IC/Constant.H"
 #include "IC/Expression.H"
 #include "IC/PNG.H"
+#include "IC/Random.H"
 #include "IO/ParmParse.H"
 #include "Numeric/Stencil.H"
 #include "Set/Base.H"
@@ -39,7 +40,7 @@ Agglomeration::Parse(Agglomeration &value, IO::ParmParse &pp)
     // Boundary conditions for agglomerate order parameter
     pp.select_default<BC::Constant>("alpha_agglom.bc", value.bc_alpha_agglom, 1);
     // Initial conditions for agglomerate order parameter
-    pp.select_default<IC::Constant, IC::Expression, IC::BMP, IC::PNG>("alpha_agglom.ic", value.ic_alpha_agglom, value.geom);
+    pp.select_default<IC::Constant, IC::Expression, IC::BMP, IC::PNG, IC::Random>("alpha_agglom.ic", value.ic_alpha_agglom, value.geom);
 
     value.RegisterNewFab(value.alphaold_agglom_mf, value.bc_alpha_agglom, 1, 1, "alpha_agglom_old", false);
     value.RegisterNewFab(value.alpha_agglom_mf, value.bc_alpha_agglom, 1, 1, "alpha_agglom", true);
