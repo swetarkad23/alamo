@@ -10,6 +10,7 @@
 #include "IC/Expression.H"
 #include "IC/PNG.H"
 #include "IO/ParmParse.H"
+#include "Numeric/Stencil.H"
 #include "Set/Base.H"
 
 #include "AMReX_Array4.H"
@@ -27,13 +28,13 @@ Agglomeration::Parse(Agglomeration &value, IO::ParmParse &pp)
     pp.queryclass<Flame>("flame", &value);
 
     // Chemical potential of the agglomerating material
-    pp.query_default("gamma", value.gamma_agglom, 0.0005);
+    pp.query_default("gamma", value.agglom.gamma, 0.0005);
     // Surface tension of the agglomerating material
-    pp.query_default("kappa", value.kappa_agglom, 1.0);
+    pp.query_default("kappa", value.agglom.kappa, 1.0);
     // Agglomeration mobility
-    pp.query_default("L0", value.L0, 1.0);
+    pp.query_default("L0", value.agglom.L0, 1.0);
     // Agglomeration mobility exponent
-    pp.query_default("n", value.n, 1.0);
+    pp.query_default("n", value.agglom.n, 1.0);
 
     // Boundary conditions for agglomerate order parameter
     pp.select_default<BC::Constant>("alpha_agglom.bc", value.bc_alpha_agglom, 1);
@@ -50,6 +51,7 @@ Agglomeration::Initialize(int lev)
     Flame::Initialize(lev);
     ic_alpha_agglom->Initialize(lev, alphaold_agglom_mf);
     ic_alpha_agglom->Initialize(lev, alpha_agglom_mf);
+    free_energy_agglom_derivative_mf[lev]->setVal(0.0);
 }
 
 void
@@ -63,13 +65,25 @@ Agglomeration::Advance(int lev, Set::Scalar time, Set::Scalar dt)
         const amrex::Box &bx = mfi.tilebox();
         amrex::Array4<const amrex::Real> const &alphaold_agglom = alphaold_agglom_mf[lev]->array(mfi);
         amrex::Array4<amrex::Real> const &alpha_agglom = alpha_agglom_mf[lev]->array(mfi);
+        amrex::Array4<amrex::Real> const &free_energy_agglom_derivative = free_energy_agglom_derivative_mf[lev]->array(mfi);
         amrex::Array4<amrex::Real> const &etanew = eta_mf[lev]->array(mfi);
 
         amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
-            // calculate effective mobility L
-            Set::Scalar L = L0 * std::pow(1 - etanew(i, j, k), n);
+            Set::Scalar laplacian_alpha = Numeric::Laplacian(alphaold_agglom, i, j, k, 0, DX);
 
-            alpha_agglom(i, j, k) = alphaold_agglom(i, j, k) + dt * L * laplacian; // Cahn-Hilliard equation
+            // calculate the variational derivative
+            free_energy_agglom_derivative(i, j, k) = 2 * pf.eps * agglom.gamma * alphaold_agglom(i, j, k) * (1 - alphaold_agglom(i, j, k)) * (1 - 2 * alphaold_agglom(i, j, k)) - agglom.kappa / pf.eps * laplacian_alpha;
+        });
+
+        amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
+            // calculate the Laplacian of the variational derivative
+            Set::Scalar laplacian = Numeric::Laplacian(free_energy_agglom_derivative, i, j, k, 0, DX);
+
+            // calculate effective mobility L
+            Set::Scalar L = agglom.L0 * std::pow(1 - etanew(i, j, k), agglom.n);
+
+            // Cahn-Hilliard equation
+            alpha_agglom(i, j, k) = alphaold_agglom(i, j, k) + dt * L * laplacian;
         });
     }
 }

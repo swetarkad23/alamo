@@ -63,11 +63,15 @@ protected:
 private:
     Set::Field<Set::Scalar> alphaold_agglom_mf;
     Set::Field<Set::Scalar> alpha_agglom_mf;
+    Set::Field<Set::Scalar> free_energy_agglom_derivative_mf;
 
-    Set::Scalar gamma_agglom = NAN;
-    Set::Scalar kappa_agglom = NAN;
-    Set::Scalar L0 = NAN;
-    Set::Scalar n = NAN;
+    struct
+    {
+        Set::Scalar gamma = NAN;
+        Set::Scalar kappa = NAN;
+        Set::Scalar L0 = NAN;
+        Set::Scalar n = NAN;
+    } agglom;
 
     BC::BC<Set::Scalar> *bc_alpha_agglom = nullptr;
     IC::IC<Set::Scalar> *ic_alpha_agglom = nullptr;

@@ -55,6 +55,16 @@ protected:
 
     Set::Field<Set::Scalar> eta_mf;
 
+    // Phase field model variables
+    struct
+    {
+        Set::Scalar eps = NAN;
+        Set::Scalar lambda = NAN;
+        Set::Scalar kappa = NAN;
+        Set::Scalar w1 = NAN, w12 = NAN, w0 = NAN;
+        Set::Scalar min_eta = 0.001;
+    } pf;
+
 private:
     Set::Field<Set::Scalar> temp_mf;
     Set::Field<Set::Scalar> temp_old_mf;
@@ -83,16 +93,6 @@ private:
     IC::IC<Set::Scalar> *ic_eta = nullptr;
     bool plot_field = true;
     int variable_pressure = -1;
-
-    // Phase field model variables
-    struct
-    {
-        Set::Scalar eps = NAN;
-        Set::Scalar lambda = NAN;
-        Set::Scalar kappa = NAN;
-        Set::Scalar w1 = NAN, w12 = NAN, w0 = NAN;
-        Set::Scalar min_eta = 0.001;
-    } pf;
 
     // Thermal transport variables
     struct
@@ -124,7 +124,6 @@ private:
         // Intensive variables
         Set::Scalar pressure = NAN;
     } chamber;
-
 
     // Propellant model
     Model::Propellant::Propellant<
