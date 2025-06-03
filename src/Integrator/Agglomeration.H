@@ -62,7 +62,7 @@ public:
 protected:
     void Initialize(int lev) override;
     void Advance(int lev, Set::Scalar time, Set::Scalar dt) override;
-    void TagCellsForRefinement(int lev, amrex::TagBoxArray &a_tags, amrex::Real time, int ngrow) override;
+    void TagCellsForRefinement(int lev, amrex::TagBoxArray &a_tags, Set::Scalar time, int ngrow) override;
 
 private:
     Set::Field<Set::Scalar> alphaold_agglom_mf;

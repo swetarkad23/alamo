@@ -1,36 +1,41 @@
 alamo.program = agglomeration
 plot_file = tests/Agglomeration/output
-amr.plot_int = 100
-amr.max_level = 5
-amr.blocking_factor = 4
-amr.base_regrid_int = 100
-amr.grid_eff = 1
+amr.plot_int = 1
+#amr.max_level = 5
+amr.max_level = 3
+#amr.blocking_factor = 4
+amr.blocking_factor = 2
+#amr.base_regrid_int = 100
+#amr.grid_eff = 1
+amr.grid_eff = 0.8
 flame.amr.refinement_criterion = 0.1
 flame.amr.refinement_criterion_temp = 10.0
 flame.amr.phi_refinement_criterion = 0.5
 amr.cell.all = 1
 
-amr.n_cell = 8 8
-geometry.prob_lo = 0.0 0.0
-geometry.prob_hi = 0.00015 0.00015
-amr.max_level = 4
+#amr.n_cell = 8 8
+amr.n_cell = 64 64
+#geometry.prob_lo = 0.0 0.0
+#geometry.prob_hi = 0.00015 0.00015
+geometry.prob_lo = -0.5 -0.5
+geometry.prob_hi = 0.5 0.5
 
 geometry.is_periodic = 0 0
 timestep = 0.000001
 flame.timestep = 0.000001
-stop_time = 0.11
+#stop_time = 0.11
+stop_time = 1.0
 
 # agglomeration stuff
 
-gamma = 1.0
-kappa = 1.0
+gamma = 1e6
+kappa = 5e-10
 L0 = 1.0
 n = 1.0
 
 refinement_threshold = 0.01
 
-alpha_agglom.ic.type = constant
-alpha_agglom.ic.constant.value = 0.15
+alpha_agglom.ic.type = random
 
 alpha_agglom.bc.type = constant
 alpha_agglom.bc.constant.type.xlo = neumann
@@ -47,10 +52,13 @@ alpha_agglom.bc.constant.val.yhi = 0.0
 flame.pf.eps = 0.000001 
 flame.pf.lambda = 0.001
 flame.pf.eta.ic.type = constant
-flame.pf.eta.ic.constant.value=1.0
-flame.phi.ic.type = psread
-flame.phi.ic.psread.filename = tests/Agglomeration/2d.xyzr
-flame.phi.ic.psread.eps = 1.13e-5 
+flame.pf.eta.ic.constant.value=0.0
+flame.phi.ic.type = constant
+flame.phi.ic.constant.value=0.0
+//flame.pf.eta.ic.constant.value=1.0
+//flame.phi.ic.type = psread
+//flame.phi.ic.psread.filename = tests/Agglomeration/2d.xyzr
+//flame.phi.ic.psread.eps = 1.13e-5 
 flame.phi.zeta_0 = 1.13e-5
 
 flame.pf.kappa = 1.0

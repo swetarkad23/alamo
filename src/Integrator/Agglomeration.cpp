@@ -48,9 +48,9 @@ Agglomeration::Parse(Agglomeration &value, IO::ParmParse &pp)
     // Boundary conditions for agglomerate order parameter
     pp.select_default<BC::Constant>("alpha_agglom.bc", value.bc_alpha_agglom, 1);
 
-    value.RegisterNewFab(value.alphaold_agglom_mf, value.bc_alpha_agglom, 1, 1, "alpha_agglom_old", false);
+    value.RegisterNewFab(value.alphaold_agglom_mf, value.bc_alpha_agglom, 1, 1, "alpha_agglom_old", true);
     value.RegisterNewFab(value.alpha_agglom_mf, value.bc_alpha_agglom, 1, 1, "alpha_agglom", true);
-    value.RegisterNewFab(value.free_energy_agglom_derivative_mf, value.bc_alpha_agglom, 1, 1, "free_energy_agglom_derivative", false);
+    value.RegisterNewFab(value.free_energy_agglom_derivative_mf, value.bc_alpha_agglom, 1, 1, "free_energy_agglom_derivative", true);
 };
 
 void
@@ -65,53 +65,61 @@ Agglomeration::Initialize(int lev)
 void
 Agglomeration::Advance(int lev, Set::Scalar time, Set::Scalar dt)
 {
-    Flame::Advance(lev, time, dt);
+    // Flame::Advance(lev, time, dt);
     std::swap(alphaold_agglom_mf[lev], alpha_agglom_mf[lev]);
     const Set::Scalar *DX = geom[lev].CellSize();
     for (amrex::MFIter mfi(*alpha_agglom_mf[lev], true); mfi.isValid(); ++mfi)
     {
         const amrex::Box &bx = mfi.tilebox();
-        amrex::Array4<const amrex::Real> const &alphaold_agglom = alphaold_agglom_mf[lev]->array(mfi);
-        amrex::Array4<amrex::Real> const &alpha_agglom = alpha_agglom_mf[lev]->array(mfi);
-        amrex::Array4<amrex::Real> const &free_energy_agglom_derivative = free_energy_agglom_derivative_mf[lev]->array(mfi);
-        amrex::Array4<amrex::Real> const &eta = eta_mf[lev]->array(mfi);
+        Set::Patch<const Set::Scalar> alphaold_agglom = alphaold_agglom_mf.Patch(lev, mfi);
+        Set::Patch<Set::Scalar> alpha_agglom = alpha_agglom_mf.Patch(lev, mfi);
+        Set::Patch<Set::Scalar> free_energy_agglom_derivative = free_energy_agglom_derivative_mf.Patch(lev, mfi);
+        Set::Patch<Set::Scalar> eta = eta_mf.Patch(lev, mfi);
 
         amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
             Set::Scalar laplacian_alpha = Numeric::Laplacian(alphaold_agglom, i, j, k, 0, DX);
 
+            // std::cout << "laplacian_alpha(" << i << ", " << j << "," << k << ") = " << laplacian_alpha << std::endl;
+
             // calculate the variational derivative
             free_energy_agglom_derivative(i, j, k) = 2 * pf.eps * agglom.gamma * alphaold_agglom(i, j, k) * (1 - alphaold_agglom(i, j, k)) * (1 - 2 * alphaold_agglom(i, j, k)) - agglom.kappa / pf.eps * laplacian_alpha;
+
+            // std::cout << "free_energy_agglom_derivative(" << i << ", " << j << ", " << k << ") = " << free_energy_agglom_derivative(i, j, k) << std::endl;
         });
 
         amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
             // calculate the Laplacian of the variational derivative
             Set::Scalar laplacian = Numeric::Laplacian(free_energy_agglom_derivative, i, j, k, 0, DX);
 
+            // std::cout << "laplacian(" << i << ", " << j << ", " << k << ") = " << laplacian << std::endl;
+
             // calculate effective mobility L
             Set::Scalar L = agglom.L0 * std::pow(1 - eta(i, j, k), agglom.n);
 
             // Cahn-Hilliard equation
             alpha_agglom(i, j, k) = alphaold_agglom(i, j, k) + dt * L * laplacian;
+
+            // std::cout << "alpha_agglom(" << i << ", " << j << ", " << k << ") = " << alpha_agglom(i, j, k) << std::endl;
         });
     }
 }
 
 void
-Agglomeration::TagCellsForRefinement(int lev, amrex::TagBoxArray &a_tags, amrex::Real time, int ngrow)
+Agglomeration::TagCellsForRefinement(int lev, amrex::TagBoxArray &a_tags, Set::Scalar time, int ngrow)
 {
-    Flame::TagCellsForRefinement(lev, a_tags, time, ngrow);
+    // Flame::TagCellsForRefinement(lev, a_tags, time, ngrow);
 
-    const Set::Scalar *DX = geom[lev].CellSize();
-    Set::Scalar dr = sqrt(AMREX_D_TERM(DX[0] * DX[0], +DX[1] * DX[1], +DX[2] * DX[2]));
+    const Set::Vector DX(geom[lev].CellSize());
+    Set::Scalar dr = DX.lpNorm<2>();
 
     for (amrex::MFIter mfi(*alpha_agglom_mf[lev], amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
         const amrex::Box &bx = mfi.tilebox();
-        amrex::Array4<char> const &tags = a_tags.array(mfi);
-        Set::Patch<const Set::Scalar> alpha_agglom = (*alpha_agglom_mf[lev]).array(mfi);
+        Set::Patch<char> tags = a_tags.array(mfi);
+        Set::Patch<const Set::Scalar> alpha_agglom = alpha_agglom_mf.Patch(lev, mfi);
 
         amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
-            Set::Vector grad = Numeric::Gradient(alpha_agglom, i, j, k, 0, DX);
+            Set::Vector grad = Numeric::Gradient(alpha_agglom, i, j, k, 0, DX.data());
             if (grad.lpNorm<2>() * dr > refinement_threshold)
                 tags(i, j, k) = amrex::TagBox::SET;
         });
