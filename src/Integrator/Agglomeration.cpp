@@ -15,13 +15,12 @@
 #include "Set/Base.H"
 #include "Set/Set.H"
 
+#include "AMReX_Algorithm.H"
 #include "AMReX_Array4.H"
 #include "AMReX_Box.H"
 #include "AMReX_GpuLaunchFunctsC.H"
 #include "AMReX_GpuQualifiers.H"
 #include "AMReX_MFIter.H"
-#include "AMReX_REAL.H"
-#include "AMReX_SPACE.H"
 #include "AMReX_TagBox.H"
 
 namespace Integrator
@@ -63,6 +62,12 @@ Agglomeration::Initialize(int lev)
 }
 
 void
+Agglomeration::TimeStepBegin(Set::Scalar a_time, int a_iter)
+{
+    // Flame::TimeStepBegin(a_time, a_iter);
+}
+
+void
 Agglomeration::Advance(int lev, Set::Scalar time, Set::Scalar dt)
 {
     // Flame::Advance(lev, time, dt);
@@ -98,6 +103,7 @@ Agglomeration::Advance(int lev, Set::Scalar time, Set::Scalar dt)
 
             // Cahn-Hilliard equation
             alpha_agglom(i, j, k) = alphaold_agglom(i, j, k) + dt * L * laplacian;
+            alpha_agglom(i, j, k) = amrex::Clamp(alpha_agglom(i, j, k), small, 1.0);
 
             // std::cout << "alpha_agglom(" << i << ", " << j << ", " << k << ") = " << alpha_agglom(i, j, k) << std::endl;
         });

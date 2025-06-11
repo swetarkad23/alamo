@@ -65,6 +65,8 @@ protected:
         Set::Scalar min_eta = 0.001;
     } pf;
 
+    Set::Scalar small = NAN;
+
 private:
     Set::Field<Set::Scalar> temp_mf;
     Set::Field<Set::Scalar> temp_old_mf;
@@ -89,7 +91,6 @@ private:
     Set::Scalar m_refinement_criterion = NAN;
     Set::Scalar t_refinement_criterion = NAN;
     Set::Scalar t_refinement_restriction = NAN;
-    Set::Scalar small = NAN;
     IC::IC<Set::Scalar> *ic_eta = nullptr;
     bool plot_field = true;
     int variable_pressure = -1;

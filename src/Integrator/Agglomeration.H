@@ -59,12 +59,12 @@ public:
 
     static void Parse(Agglomeration &value, IO::ParmParse &pp);
 
-protected:
+private:
     void Initialize(int lev) override;
+    void TimeStepBegin(Set::Scalar a_time, int a_iter) override;
     void Advance(int lev, Set::Scalar time, Set::Scalar dt) override;
     void TagCellsForRefinement(int lev, amrex::TagBoxArray &a_tags, Set::Scalar time, int ngrow) override;
 
-private:
     Set::Field<Set::Scalar> alphaold_agglom_mf;
     Set::Field<Set::Scalar> alpha_agglom_mf;
     Set::Field<Set::Scalar> free_energy_agglom_derivative_mf;
