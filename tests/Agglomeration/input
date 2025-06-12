@@ -21,7 +21,7 @@ stop_time = 0.11
 
 # agglomeration stuff
 
-gamma = 9e9
+gamma = 2e9
 kappa = 2e-13
 L0 = 5e-11
 n = 1.0
@@ -45,13 +45,10 @@ alpha_agglom.bc.constant.val.yhi = 0.0
 flame.pf.eps = 0.000001 
 flame.pf.lambda = 0.001
 flame.pf.eta.ic.type = constant
-flame.pf.eta.ic.constant.value=0.0
-flame.phi.ic.type = constant
-flame.phi.ic.constant.value=0.0
-//flame.pf.eta.ic.constant.value=1.0
-//flame.phi.ic.type = psread
-//flame.phi.ic.psread.filename = tests/Agglomeration/2d.xyzr
-//flame.phi.ic.psread.eps = 1.13e-5 
+flame.pf.eta.ic.constant.value=1.0
+flame.phi.ic.type = psread
+flame.phi.ic.psread.filename = tests/Agglomeration/2d.xyzr
+flame.phi.ic.psread.eps = 1.13e-5 
 flame.phi.zeta_0 = 1.13e-5
 
 flame.pf.kappa = 1.0

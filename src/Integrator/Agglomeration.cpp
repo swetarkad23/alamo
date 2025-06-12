@@ -64,13 +64,13 @@ Agglomeration::Initialize(int lev)
 void
 Agglomeration::TimeStepBegin(Set::Scalar a_time, int a_iter)
 {
-    // Flame::TimeStepBegin(a_time, a_iter);
+    Flame::TimeStepBegin(a_time, a_iter);
 }
 
 void
 Agglomeration::Advance(int lev, Set::Scalar time, Set::Scalar dt)
 {
-    // Flame::Advance(lev, time, dt);
+    Flame::Advance(lev, time, dt);
     std::swap(alphaold_agglom_mf[lev], alpha_agglom_mf[lev]);
     const Set::Scalar *DX = geom[lev].CellSize();
     for (amrex::MFIter mfi(*alpha_agglom_mf[lev], true); mfi.isValid(); ++mfi)
@@ -84,19 +84,13 @@ Agglomeration::Advance(int lev, Set::Scalar time, Set::Scalar dt)
         amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
             Set::Scalar laplacian_alpha = Numeric::Laplacian(alphaold_agglom, i, j, k, 0, DX);
 
-            // std::cout << "laplacian_alpha(" << i << ", " << j << "," << k << ") = " << laplacian_alpha << std::endl;
-
             // calculate the variational derivative
             free_energy_agglom_derivative(i, j, k) = 2 * pf.eps * agglom.gamma * alphaold_agglom(i, j, k) * (1 - alphaold_agglom(i, j, k)) * (1 - 2 * alphaold_agglom(i, j, k)) - agglom.kappa / pf.eps * laplacian_alpha;
-
-            // std::cout << "free_energy_agglom_derivative(" << i << ", " << j << ", " << k << ") = " << free_energy_agglom_derivative(i, j, k) << std::endl;
         });
 
         amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
             // calculate the Laplacian of the variational derivative
             Set::Scalar laplacian = Numeric::Laplacian(free_energy_agglom_derivative, i, j, k, 0, DX);
-
-            // std::cout << "laplacian(" << i << ", " << j << ", " << k << ") = " << laplacian << std::endl;
 
             // calculate effective mobility L
             Set::Scalar L = agglom.L0 * std::pow(1 - eta(i, j, k), agglom.n);
@@ -104,8 +98,6 @@ Agglomeration::Advance(int lev, Set::Scalar time, Set::Scalar dt)
             // Cahn-Hilliard equation
             alpha_agglom(i, j, k) = alphaold_agglom(i, j, k) + dt * L * laplacian;
             alpha_agglom(i, j, k) = amrex::Clamp(alpha_agglom(i, j, k), small, 1.0);
-
-            // std::cout << "alpha_agglom(" << i << ", " << j << ", " << k << ") = " << alpha_agglom(i, j, k) << std::endl;
         });
     }
 }
@@ -113,7 +105,7 @@ Agglomeration::Advance(int lev, Set::Scalar time, Set::Scalar dt)
 void
 Agglomeration::TagCellsForRefinement(int lev, amrex::TagBoxArray &a_tags, Set::Scalar time, int ngrow)
 {
-    // Flame::TagCellsForRefinement(lev, a_tags, time, ngrow);
+    Flame::TagCellsForRefinement(lev, a_tags, time, ngrow);
 
     const Set::Vector DX(geom[lev].CellSize());
     Set::Scalar dr = DX.lpNorm<2>();
