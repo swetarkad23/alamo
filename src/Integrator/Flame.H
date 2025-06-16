@@ -12,9 +12,9 @@
 
 #include "Base/Mechanics.H"
 
-#include "Model/Propellant/PowerLaw.H"
 #include "Model/Propellant/FullFeedback.H"
 #include "Model/Propellant/Homogenize.H"
+#include "Model/Propellant/PowerLaw.H"
 
 namespace Integrator
 {
@@ -55,18 +55,6 @@ protected:
 
     Set::Field<Set::Scalar> eta_mf;
 
-    // Phase field model variables
-    struct
-    {
-        Set::Scalar eps = NAN;
-        Set::Scalar lambda = NAN;
-        Set::Scalar kappa = NAN;
-        Set::Scalar w1 = NAN, w12 = NAN, w0 = NAN;
-        Set::Scalar min_eta = 0.001;
-    } pf;
-
-    Set::Scalar small = NAN;
-
 private:
     Set::Field<Set::Scalar> temp_mf;
     Set::Field<Set::Scalar> temp_old_mf;
@@ -91,9 +79,20 @@ private:
     Set::Scalar m_refinement_criterion = NAN;
     Set::Scalar t_refinement_criterion = NAN;
     Set::Scalar t_refinement_restriction = NAN;
+    Set::Scalar small = NAN;
     IC::IC<Set::Scalar> *ic_eta = nullptr;
     bool plot_field = true;
     int variable_pressure = -1;
+
+    // Phase field model variables
+    struct
+    {
+        Set::Scalar eps = NAN;
+        Set::Scalar lambda = NAN;
+        Set::Scalar kappa = NAN;
+        Set::Scalar w1 = NAN, w12 = NAN, w0 = NAN;
+        Set::Scalar min_eta = 0.001;
+    } pf;
 
     // Thermal transport variables
     struct
@@ -102,7 +101,7 @@ private:
         Set::Scalar hc = NAN, w1 = NAN;
         Set::Scalar Tref = NAN;
         Set::Scalar Tfluid = NAN;
-        IC::IC<Set::Scalar>* ic_temp = nullptr;
+        IC::IC<Set::Scalar> *ic_temp = nullptr;
     } thermal;
 
     // Thermoelastic variables
@@ -126,11 +125,14 @@ private:
         Set::Scalar pressure = NAN;
     } chamber;
 
+    BC::BC<Set::Scalar> *bc_psi = nullptr;
+
     // Propellant model
     Model::Propellant::Propellant<
         Model::Propellant::PowerLaw,
         Model::Propellant::FullFeedback,
-        Model::Propellant::Homogenize> propellant;
+        Model::Propellant::Homogenize>
+        propellant;
 };
 }
 

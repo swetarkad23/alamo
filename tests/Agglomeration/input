@@ -28,7 +28,11 @@ n = 1.0
 
 refinement_threshold = 0.01
 
-alpha_agglom.ic.type = random
+alpha_agglom.ic.type = beta_distribution
+alpha_agglom.ic.beta_distribution.alpha = 12.0
+alpha_agglom.ic.beta_distribution.beta = 12.0
+alpha_agglom.ic.beta_distribution.offset = 0.05
+alpha_agglom.ic.beta_distribution.mult = 0.15
 
 alpha_agglom.bc.type = constant
 alpha_agglom.bc.constant.type.xlo = neumann
