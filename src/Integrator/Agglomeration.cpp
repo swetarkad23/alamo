@@ -22,6 +22,7 @@
 #include "AMReX_GpuLaunchFunctsC.H"
 #include "AMReX_GpuQualifiers.H"
 #include "AMReX_MFIter.H"
+#include "AMReX_MultiFab.H"
 #include "AMReX_TagBox.H"
 
 namespace Integrator
@@ -31,6 +32,8 @@ Agglomeration::Parse(Agglomeration &value, IO::ParmParse &pp)
 {
     pp.queryclass<Flame>("flame", &value);
 
+    // Diffuse interface length of the agglomerate phase
+    pp.query_default("eps", value.agglom.eps, 1e-7);
     // Chemical potential of the agglomerating material
     pp.query_default("gamma", value.agglom.gamma, 0.0005);
     // Surface tension of the agglomerating material
@@ -48,7 +51,7 @@ Agglomeration::Parse(Agglomeration &value, IO::ParmParse &pp)
     // Boundary conditions for agglomerate order parameter
     pp.select_default<BC::Constant>("alpha_agglom.bc", value.bc_alpha_agglom, 1);
 
-    value.RegisterNewFab(value.alphaold_agglom_mf, value.bc_alpha_agglom, 1, 1, "alpha_agglom_old", true);
+    value.RegisterNewFab(value.alphaold_agglom_mf, value.bc_alpha_agglom, 1, 1, "alpha_agglom_old", false);
     value.RegisterNewFab(value.alpha_agglom_mf, value.bc_alpha_agglom, 1, 1, "alpha_agglom", true);
     value.RegisterNewFab(value.free_energy_agglom_derivative_mf, value.bc_alpha_agglom, 1, 1, "free_energy_agglom_derivative", true);
 };
@@ -60,12 +63,12 @@ Agglomeration::Initialize(int lev)
     ic_alpha_agglom->Initialize(lev, alphaold_agglom_mf);
     ic_alpha_agglom->Initialize(lev, alpha_agglom_mf);
     free_energy_agglom_derivative_mf[lev]->setVal(0.0);
-}
 
-void
-Agglomeration::TimeStepBegin(Set::Scalar a_time, int a_iter)
-{
-    Flame::TimeStepBegin(a_time, a_iter);
+    const MultiFab phi_compliment_mf;
+    phi_compliment_mf[lev]->setVal(1.0);
+
+    MultiFab::Subtract(*phi_compliment_mf[lev], *phi_mf[lev], 1, 1, 1, 2);
+    MultiFab::Multiply(*alpha_agglom_mf[lev], *phi_compliment_mf[lev], 1, 1, 1, 2);
 }
 
 void
@@ -86,7 +89,7 @@ Agglomeration::Advance(int lev, Set::Scalar time, Set::Scalar dt)
             Set::Scalar laplacian_alpha = Numeric::Laplacian(alphaold_agglom, i, j, k, 0, DX);
 
             // calculate the variational derivative
-            free_energy_agglom_derivative(i, j, k) = 2 * pf.eps * agglom.gamma * alphaold_agglom(i, j, k) * (1 - alphaold_agglom(i, j, k)) * (1 - 2 * alphaold_agglom(i, j, k)) - agglom.kappa / pf.eps * laplacian_alpha;
+            free_energy_agglom_derivative(i, j, k) = 2 * agglom.eps * agglom.gamma * alphaold_agglom(i, j, k) * (1 - alphaold_agglom(i, j, k)) * (1 - 2 * alphaold_agglom(i, j, k)) - agglom.kappa / agglom.eps * laplacian_alpha;
         });
 
         amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) {

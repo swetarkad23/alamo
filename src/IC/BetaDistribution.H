@@ -5,6 +5,7 @@
 #include "IO/ParmParse.H"
 #include "Set/Base.H"
 #include "Set/Set.H"
+#include "Util/Distribution.H"
 #include "Util/Util.H"
 
 #include "AMReX_Box.H"
@@ -18,11 +19,11 @@
 
 namespace IC
 {
-/// Set each point to a random value with a beta distribution
+/// Set each point to a random value with a specified beta distribution
 class BetaDistribution : public Random
 {
 public:
-    static constexpr const char *name = "beta_distribution";
+    static constexpr const char *name = "betadistribution";
 
     BetaDistribution(amrex::Vector<amrex::Geometry> &_geom, Set::Scalar a_mult)
         : Random(_geom, a_mult) {}
@@ -57,7 +58,7 @@ public:
             for (int n = 0; n < a_field[lev]->nComp(); n++)
             {
                 amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
-                    Set::Scalar beta_value = Distributions::Beta(local_alpha, local_beta);
+                    Set::Scalar beta_value = Util::Distribution::Beta(local_alpha, local_beta);
                     field(i, j, k, n) += local_offset + local_mult * beta_value;
                 });
             }

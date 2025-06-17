@@ -61,7 +61,6 @@ public:
 
 private:
     void Initialize(int lev) override;
-    void TimeStepBegin(Set::Scalar a_time, int a_iter) override;
     void Advance(int lev, Set::Scalar time, Set::Scalar dt) override;
     void TagCellsForRefinement(int lev, amrex::TagBoxArray &a_tags, Set::Scalar time, int ngrow) override;
 
@@ -71,6 +70,7 @@ private:
 
     struct
     {
+        Set::Scalar eps = NAN;
         Set::Scalar gamma = NAN;
         Set::Scalar kappa = NAN;
         Set::Scalar L0 = NAN;

@@ -31,6 +31,8 @@ public:
     Flame();
     Flame(IO::ParmParse &pp);
 
+    static void Forbids(IO::ParmParse &pp);
+
     static void Parse(Flame &value, IO::ParmParse &pp);
 
     virtual ~Flame()
@@ -55,6 +57,9 @@ protected:
 
     Set::Field<Set::Scalar> eta_mf;
 
+    Set::Scalar small = NAN;
+    Set::Field<Set::Scalar> phi_mf;
+
 private:
     Set::Field<Set::Scalar> temp_mf;
     Set::Field<Set::Scalar> temp_old_mf;
@@ -63,7 +68,6 @@ private:
     Set::Field<Set::Scalar> eta_old_mf;
     Set::Field<Set::Scalar> mdot_mf;
 
-    Set::Field<Set::Scalar> phi_mf;
     Set::Field<Set::Scalar> field;
     Set::Field<Set::Scalar> alpha_mf;
     Set::Field<Set::Scalar> heatflux_mf;
@@ -79,7 +83,6 @@ private:
     Set::Scalar m_refinement_criterion = NAN;
     Set::Scalar t_refinement_criterion = NAN;
     Set::Scalar t_refinement_restriction = NAN;
-    Set::Scalar small = NAN;
     IC::IC<Set::Scalar> *ic_eta = nullptr;
     bool plot_field = true;
     int variable_pressure = -1;
