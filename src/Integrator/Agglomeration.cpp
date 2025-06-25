@@ -1,6 +1,7 @@
 #include <cmath>
 #include <utility>
 
+#include "AMReX_MultiFabUtil.H"
 #include "Agglomeration.H"
 #include "Flame.H"
 
@@ -23,6 +24,7 @@
 #include "AMReX_GpuQualifiers.H"
 #include "AMReX_MFIter.H"
 #include "AMReX_MultiFab.H"
+#include "AMReX_MultiFabUtil.H"
 #include "AMReX_TagBox.H"
 
 namespace Integrator
@@ -64,11 +66,14 @@ Agglomeration::Initialize(int lev)
     ic_alpha_agglom->Initialize(lev, alpha_agglom_mf);
     free_energy_agglom_derivative_mf[lev]->setVal(0.0);
 
-    const MultiFab phi_compliment_mf;
-    phi_compliment_mf[lev]->setVal(1.0);
+    MultiFab phi_compliment_mf(alpha_agglom_mf[lev]->boxArray(), alpha_agglom_mf[lev]->DistributionMap(), 1, 1);
+    phi_compliment_mf.setVal(1.0);
 
-    MultiFab::Subtract(*phi_compliment_mf[lev], *phi_mf[lev], 1, 1, 1, 2);
-    MultiFab::Multiply(*alpha_agglom_mf[lev], *phi_compliment_mf[lev], 1, 1, 1, 2);
+    MultiFab phi_cell_based_mf(alpha_agglom_mf[lev]->boxArray(), alpha_agglom_mf[lev]->DistributionMap(), 1, 1);
+    average_node_to_cellcenter(phi_cell_based_mf, 0, *phi_mf[lev], 0, 1, 1);
+
+    MultiFab::Subtract(phi_compliment_mf, phi_cell_based_mf, 0, 0, 1, 1);
+    MultiFab::Multiply(*alpha_agglom_mf[lev], phi_compliment_mf, 0, 0, 1, 1);
 }
 
 void
