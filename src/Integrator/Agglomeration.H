@@ -1,17 +1,17 @@
 //
 // This implements a phase field model for agglomeration of
-// nanoparticles in an SCP. The chemical potential :math:`W_C[\alpha]`
-// is defined as
+// nanoparticles in a solid composite propellant (SCP). The chemical
+// potential :math:`W_C[\alpha]` is defined as
 //
 // .. math::
-//    W_C[\alpha] = \epsilon\gamma\alpha^2(1-\alpha)^2,
+//    W_C[\alpha] = \frac{\gamma}{\epsilon}\alpha^2(1-\alpha)^2,
 //
 // where :math:`\epsilon` is the diffuse interface width and
 // :math:`\gamma` is a parameter. To capture the surface tension of
-// the agglomerate, we define
+// the agglomerate phase, we define
 //
 // .. math::
-//    W_B[\alpha] = \frac{1}{2\epsilon}\kappa|\nabla\alpha|^2,
+//    W_B[\alpha] = \frac{1}{2}\epsilon\kappa|\nabla\alpha|^2,
 //
 // where :math:`\kappa` is a parameter. The free energy is
 //
@@ -23,14 +23,21 @@
 // .. math::
 //    L = L_0(1-\eta)^n,
 //
-// where :math:`L_0` is the mobility parameter, and :math:`n` is some
-// constant greater than 0.
+// where :math:`L_0` is the prescribed mobility parameter, and
+// :math:`n` is some constant greater than 0.
 //
-// The :math:`\alpha` phase is evolved according to Cahn-Hilliard
-// kinetics:
+// The :math:`\alpha` phase can be evolved according to Cahn-Hilliard
+// kinetics
 //
 // .. math::
 //    \frac{\partial\alpha}{\partial t} = L\Delta\left(\frac{\delta F}{\delta\alpha}\right)
+//
+// or Allen-Cahn kinetics with a Lagrangian constraint
+//
+// .. math::
+//    \frac{\partial\alpha}{\partial t} = -L\frac{\delta F}{\delta\alpha} + \lambda\left(\int_\Omega\alpha\mathrm{d}\boldsymbol{x} - V_0\right),
+//
+// where :math:`\lambda` is a suitably large Lagrangian multiplier to enforce the constraint up to tolerance, and :math:`\V_0` is the prescribed volume fraction of agglomerate in the domain.
 
 #ifndef INTEGRATOR_AGGLOMERATION_H
 #define INTEGRATOR_AGGLOMERATION_H
@@ -60,6 +67,7 @@ public:
 
 private:
     void Initialize(int lev) override;
+
     /**
      * @brief Scales the dst order parameter by the complement of src
      *
@@ -75,26 +83,25 @@ private:
      * @warning Assumes src is in the range [0.0,1.0].
      */
     void scaleByComplement(MultiFab &dst, const MultiFab &src, int srccomp, int dstcomp, int numcomp, int nghost);
+
     void Advance(int lev, Set::Scalar time, Set::Scalar dt) override;
     void TagCellsForRefinement(int lev, amrex::TagBoxArray &a_tags, Set::Scalar time, int ngrow) override;
 
-    Set::Field<Set::Scalar> alphaold_agglom_mf;
-    Set::Field<Set::Scalar> alpha_agglom_mf;
-    Set::Field<Set::Scalar> free_energy_agglom_derivative_mf;
-
     struct
     {
-        Set::Scalar eps = NAN;
+        Set::Field<Set::Scalar> alpha_old;
+        Set::Field<Set::Scalar> alpha;
+        IC::IC<Set::Scalar> *alpha_ic = nullptr;
+        BC::BC<Set::Scalar> *alpha_bc = nullptr;
+        Set::Field<Set::Scalar> free_energy_derivative;
+        Set::Scalar epsilon = NAN;
         Set::Scalar gamma = NAN;
         Set::Scalar kappa = NAN;
-        Set::Scalar L0 = NAN;
+        Set::Scalar L_0 = NAN;
         Set::Scalar n = NAN;
     } agglom;
 
     Set::Scalar refinement_threshold = NAN;
-
-    IC::IC<Set::Scalar> *ic_alpha_agglom = nullptr;
-    BC::BC<Set::Scalar> *bc_alpha_agglom = nullptr;
 };
 }
 #endif

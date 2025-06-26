@@ -136,26 +136,26 @@ flame.elastic.bc.constant.type.xloyhi = trac disp
 flame.elastic.traction = 0.0
 
 # Agglomeration parameters
-eps = 1e-7
+epsilon = 1e-7
 gamma = 1e10
 kappa = 1e-12
-L0 = 5e-11
+L_0 = 5e-11
 n = 5.0
 
 # Agglomerate order parameter initial condition
-alpha_agglom.ic.type = betadistribution
-alpha_agglom.ic.betadistribution.alpha = 12.0
-alpha_agglom.ic.betadistribution.beta = 12.0
-alpha_agglom.ic.betadistribution.offset = 0.675
-alpha_agglom.ic.betadistribution.mult = 0.15
+alpha.ic.type = betadistribution
+alpha.ic.betadistribution.alpha = 12.0
+alpha.ic.betadistribution.beta = 12.0
+alpha.ic.betadistribution.offset = 0.675
+alpha.ic.betadistribution.mult = 0.15
 
 # Agglomerate order parameter boundary conditions
-alpha_agglom.bc.type = constant
-alpha_agglom.bc.constant.type.xlo = neumann
-alpha_agglom.bc.constant.type.xhi = neumann
-alpha_agglom.bc.constant.type.ylo = neumann
-alpha_agglom.bc.constant.type.yhi = neumann
-alpha_agglom.bc.constant.val.xlo = 0.0
-alpha_agglom.bc.constant.val.xhi = 0.0
-alpha_agglom.bc.constant.val.ylo = 0.0
-alpha_agglom.bc.constant.val.yhi = 0.0
+alpha.bc.type = constant
+alpha.bc.constant.type.xlo = neumann
+alpha.bc.constant.type.xhi = neumann
+alpha.bc.constant.type.ylo = neumann
+alpha.bc.constant.type.yhi = neumann
+alpha.bc.constant.val.xlo = 0.0
+alpha.bc.constant.val.xhi = 0.0
+alpha.bc.constant.val.ylo = 0.0
+alpha.bc.constant.val.yhi = 0.0
