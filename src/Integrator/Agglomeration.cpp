@@ -62,18 +62,35 @@ void
 Agglomeration::Initialize(int lev)
 {
     Flame::Initialize(lev);
-    ic_alpha_agglom->Initialize(lev, alphaold_agglom_mf);
+    alphaold_agglom_mf[lev]->setVal(0.0);
     ic_alpha_agglom->Initialize(lev, alpha_agglom_mf);
     free_energy_agglom_derivative_mf[lev]->setVal(0.0);
 
-    MultiFab phi_compliment_mf(alpha_agglom_mf[lev]->boxArray(), alpha_agglom_mf[lev]->DistributionMap(), 1, 1);
-    phi_compliment_mf.setVal(1.0);
+    int nComp = alpha_agglom_mf[lev]->nComp();
+    int nGrow = alpha_agglom_mf[lev]->nGrow();
+    MultiFab cell_based_phi(alpha_agglom_mf[lev]->boxArray(), alpha_agglom_mf[lev]->DistributionMap(), nComp, nGrow);
+    average_node_to_cellcenter(cell_based_phi, 0, *phi_mf[lev], 0, nComp, nGrow);
 
-    MultiFab phi_cell_based_mf(alpha_agglom_mf[lev]->boxArray(), alpha_agglom_mf[lev]->DistributionMap(), 1, 1);
-    average_node_to_cellcenter(phi_cell_based_mf, 0, *phi_mf[lev], 0, 1, 1);
+    scaleByComplement(*alpha_agglom_mf[lev], cell_based_phi, 0, 0, nComp, nGrow);
+}
 
-    MultiFab::Subtract(phi_compliment_mf, phi_cell_based_mf, 0, 0, 1, 1);
-    MultiFab::Multiply(*alpha_agglom_mf[lev], phi_compliment_mf, 0, 0, 1, 1);
+void
+Agglomeration::scaleByComplement(MultiFab &dst, const MultiFab &src, int srccomp, int dstcomp, int numcomp, int nghost)
+{
+    int nCompSrc = src.nComp();
+    int nGrowSrc = src.nGrow();
+
+    for (int comp = 0; comp < numcomp; ++comp)
+    {
+        Util::Assert(INFO, TEST(src.min(srccomp + comp) >= 0.0));
+        Util::Assert(INFO, TEST(src.max(srccomp + comp) <= 1.0));
+    }
+
+    MultiFab complement(src.boxArray(), src.DistributionMap(), nCompSrc, nGrowSrc);
+    complement.setVal(1.0);
+
+    MultiFab::Subtract(complement, src, 0, 0, nCompSrc, nGrowSrc);
+    MultiFab::Multiply(dst, complement, srccomp, dstcomp, numcomp, nghost);
 }
 
 void
