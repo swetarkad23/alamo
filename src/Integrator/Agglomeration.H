@@ -38,6 +38,11 @@
 //    \frac{\partial\alpha}{\partial t} = -L\frac{\delta F}{\delta\alpha} + \lambda\left(\int_\Omega\alpha\mathrm{d}\boldsymbol{x} - V_0\right),
 //
 // where :math:`\lambda` is a suitably large Lagrangian multiplier to enforce the constraint up to tolerance, and :math:`\V_0` is the prescribed volume fraction of agglomerate in the domain.
+//
+// For reference, the functional derivative of the free energy :math:`F` is
+//
+// .. math::
+//    \frac{\delta F}{\delta\alpha}=2\frac{\gamma}{\epsilon}\alpha(1-\alpha)(1-2\alpha)-\epsilon\kappa\Delta\alpha
 
 #ifndef INTEGRATOR_AGGLOMERATION_H
 #define INTEGRATOR_AGGLOMERATION_H
@@ -48,14 +53,16 @@
 #include "Integrator/Flame.H"
 #include "Set/Base.H"
 
+#include "AMReX_Enum.H"
 #include "AMReX_TagBox.H"
 
 namespace Integrator
 {
 
+AMREX_ENUM(AgglomerationKinetics, ConstrainedAllenCahn, CahnHilliard);
+
 class Agglomeration : public Flame
 {
-
 public:
     static constexpr const char *name = "agglomeration";
 
@@ -85,20 +92,27 @@ private:
     void scaleByComplement(MultiFab &dst, const MultiFab &src, int srccomp, int dstcomp, int numcomp, int nghost);
 
     void Advance(int lev, Set::Scalar time, Set::Scalar dt) override;
+    void constrainedAllenCahnKernel(int i, int j, int k, Set::Scalar dt, const Set::Scalar *dx, Set::Patch<const Set::Scalar> &alpha_old, Set::Patch<Set::Scalar> &alpha, Set::Patch<Set::Scalar> &free_energy_derivative, Set::Patch<Set::Scalar> &eta);
+    void cahnHilliardKernel(int i, int j, int k, Set::Scalar dt, const Set::Scalar *dx, Set::Patch<const Set::Scalar> &alpha_old, Set::Patch<Set::Scalar> &alpha, Set::Patch<Set::Scalar> &free_energy_derivative, Set::Patch<Set::Scalar> &eta);
+
     void TagCellsForRefinement(int lev, amrex::TagBoxArray &a_tags, Set::Scalar time, int ngrow) override;
 
     struct
     {
+        AgglomerationKinetics kinetics_method = getEnum<AgglomerationKinetics>("CahnHilliard");
         Set::Field<Set::Scalar> alpha_old;
         Set::Field<Set::Scalar> alpha;
+        Set::Scalar alpha_mean = NAN;
         IC::IC<Set::Scalar> *alpha_ic = nullptr;
         BC::BC<Set::Scalar> *alpha_bc = nullptr;
         Set::Field<Set::Scalar> free_energy_derivative;
         Set::Scalar epsilon = NAN;
         Set::Scalar gamma = NAN;
         Set::Scalar kappa = NAN;
+        Set::Scalar lambda = NAN;
         Set::Scalar L_0 = NAN;
         Set::Scalar n = NAN;
+        Set::Scalar V_0 = NAN;
     } agglom;
 
     Set::Scalar refinement_threshold = NAN;

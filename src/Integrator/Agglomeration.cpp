@@ -1,6 +1,7 @@
 #include <cmath>
 #include <utility>
 
+#include "AMReX_Enum.H"
 #include "AMReX_MultiFabUtil.H"
 #include "Agglomeration.H"
 #include "Flame.H"
@@ -34,6 +35,9 @@ Agglomeration::Parse(Agglomeration &value, IO::ParmParse &pp)
 {
     pp.queryclass<Flame>("flame", &value);
 
+    // Method to use for agglomeration kinetics
+    pp.query_enum_case_insensitive("kinetics_method", value.agglom.kinetics_method);
+
     // Diffuse interface length of the agglomerate phase
     pp.query_default("epsilon", value.agglom.epsilon, 1e-7);
     // Chemical potential of the agglomerating material
@@ -44,6 +48,18 @@ Agglomeration::Parse(Agglomeration &value, IO::ParmParse &pp)
     pp.query_default("L_0", value.agglom.L_0, 1.0);
     // Agglomeration mobility exponent
     pp.query_default("n", value.agglom.n, 1.0);
+
+    if (value.agglom.kinetics_method == AgglomerationKinetics::ConstrainedAllenCahn)
+    {
+        // Lagrangian multiplier for the agglomerate volume fraction
+        // constraint
+        pp.query_default("lambda", value.agglom.lambda, 100.0);
+        // Prescribed volume fraction of agglomerate in the domain. If
+        // unset, it will default to the initial volume fraction of
+        // agglomerate in the domain based on the given initial
+        // condition.
+        pp.query("V_0", value.agglom.V_0);
+    }
 
     // Regridding criterion
     pp.query_default("refinement_threshold", value.refinement_threshold, 1e100);
@@ -72,6 +88,11 @@ Agglomeration::Initialize(int lev)
     average_node_to_cellcenter(cell_based_phi, 0, *phi_mf[lev], 0, nComp, nGrow);
 
     scaleByComplement(*agglom.alpha[lev], cell_based_phi, 0, 0, nComp, nGrow);
+
+    if (agglom.V_0 == NAN)
+    {
+        // TODO: Calculate initial agglomerate phase volume fraction
+    }
 }
 
 void
@@ -116,15 +137,21 @@ Agglomeration::Advance(int lev, Set::Scalar time, Set::Scalar dt)
         });
 
         amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
-            // calculate the Laplacian of the variational derivative
-            Set::Scalar free_energy_laplacian = Numeric::Laplacian(free_energy_derivative, i, j, k, 0, dx);
-
             // calculate effective mobility L
             Set::Scalar L = agglom.L_0 * std::pow(1 - eta(i, j, k), agglom.n);
 
-            // Cahn-Hilliard equation
-            alpha(i, j, k) = alpha_old(i, j, k) + dt * L * free_energy_laplacian;
-            alpha(i, j, k) = amrex::Clamp(alpha(i, j, k), small, 1.0);
+            if (agglom.kinetics_method == AgglomerationKinetics::ConstrainedAllenCahn)
+                // constrained Allen-Cahn equation
+                // TODO: actually update agglom.alpha_mean
+                alpha(i, j, k) = alpha_old(i, j, k) + dt * (-L * free_energy_derivative(i, j, k) + agglom.lambda * (agglom.alpha_mean - agglom.V_0));
+            else if (agglom.kinetics_method == AgglomerationKinetics::CahnHilliard)
+            {
+                // calculate the Laplacian of the variational derivative
+                Set::Scalar free_energy_laplacian = Numeric::Laplacian(free_energy_derivative, i, j, k, 0, dx);
+
+                // Cahn-Hilliard equation
+                alpha(i, j, k) = alpha_old(i, j, k) + dt * L * free_energy_laplacian;
+            }
         });
     }
 }
