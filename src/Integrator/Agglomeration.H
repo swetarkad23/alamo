@@ -92,17 +92,14 @@ private:
     void scaleByComplement(MultiFab &dst, const MultiFab &src, int srccomp, int dstcomp, int numcomp, int nghost);
 
     void Advance(int lev, Set::Scalar time, Set::Scalar dt) override;
-    void constrainedAllenCahnKernel(int i, int j, int k, Set::Scalar dt, const Set::Scalar *dx, Set::Patch<const Set::Scalar> &alpha_old, Set::Patch<Set::Scalar> &alpha, Set::Patch<Set::Scalar> &free_energy_derivative, Set::Patch<Set::Scalar> &eta);
-    void cahnHilliardKernel(int i, int j, int k, Set::Scalar dt, const Set::Scalar *dx, Set::Patch<const Set::Scalar> &alpha_old, Set::Patch<Set::Scalar> &alpha, Set::Patch<Set::Scalar> &free_energy_derivative, Set::Patch<Set::Scalar> &eta);
-
     void TagCellsForRefinement(int lev, amrex::TagBoxArray &a_tags, Set::Scalar time, int ngrow) override;
+    void Integrate(int amrlev, Set::Scalar time, int step, const amrex::MFIter &mif, const amrex::Box &box) override;
 
     struct
     {
         AgglomerationKinetics kinetics_method = getEnum<AgglomerationKinetics>("CahnHilliard");
         Set::Field<Set::Scalar> alpha_old;
         Set::Field<Set::Scalar> alpha;
-        Set::Scalar alpha_mean = NAN;
         IC::IC<Set::Scalar> *alpha_ic = nullptr;
         BC::BC<Set::Scalar> *alpha_bc = nullptr;
         Set::Field<Set::Scalar> free_energy_derivative;
@@ -112,6 +109,7 @@ private:
         Set::Scalar lambda = NAN;
         Set::Scalar L_0 = NAN;
         Set::Scalar n = NAN;
+        Set::Scalar V = NAN;
         Set::Scalar V_0 = NAN;
     } agglom;
 

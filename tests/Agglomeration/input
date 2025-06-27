@@ -135,12 +135,16 @@ flame.elastic.bc.constant.type.xloyhi = trac disp
 # No traction on free surface
 flame.elastic.traction = 0.0
 
+# Agglomeration kinetics method
+kinetics_method = CahnHilliard
+
 # Agglomeration parameters
 epsilon = 1e-7
 gamma = 1e10
 kappa = 1e-12
 L_0 = 5e-11
 n = 5.0
+# lambda = 100
 
 # Agglomerate order parameter initial condition
 alpha.ic.type = betadistribution

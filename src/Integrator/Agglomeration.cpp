@@ -1,7 +1,6 @@
 #include <cmath>
 #include <utility>
 
-#include "AMReX_Enum.H"
 #include "AMReX_MultiFabUtil.H"
 #include "Agglomeration.H"
 #include "Flame.H"
@@ -18,7 +17,6 @@
 #include "Set/Base.H"
 #include "Set/Set.H"
 
-#include "AMReX_Algorithm.H"
 #include "AMReX_Array4.H"
 #include "AMReX_Box.H"
 #include "AMReX_GpuLaunchFunctsC.H"
@@ -72,7 +70,10 @@ Agglomeration::Parse(Agglomeration &value, IO::ParmParse &pp)
     value.RegisterNewFab(value.agglom.alpha_old, value.agglom.alpha_bc, 1, 1, "agglom.alpha_old", false);
     value.RegisterNewFab(value.agglom.alpha, value.agglom.alpha_bc, 1, 1, "agglom.alpha", true);
     value.RegisterNewFab(value.agglom.free_energy_derivative, value.agglom.alpha_bc, 1, 1, "agglom.free_energy_derivative", true);
-};
+
+    if (value.agglom.kinetics_method == AgglomerationKinetics::ConstrainedAllenCahn)
+        value.RegisterIntegratedVariable(&value.agglom.V, "agglom.V");
+}
 
 void
 Agglomeration::Initialize(int lev)
@@ -88,11 +89,6 @@ Agglomeration::Initialize(int lev)
     average_node_to_cellcenter(cell_based_phi, 0, *phi_mf[lev], 0, nComp, nGrow);
 
     scaleByComplement(*agglom.alpha[lev], cell_based_phi, 0, 0, nComp, nGrow);
-
-    if (agglom.V_0 == NAN)
-    {
-        // TODO: Calculate initial agglomerate phase volume fraction
-    }
 }
 
 void
@@ -118,8 +114,23 @@ void
 Agglomeration::Advance(int lev, Set::Scalar time, Set::Scalar dt)
 {
     Flame::Advance(lev, time, dt);
+
     std::swap(agglom.alpha_old[lev], agglom.alpha[lev]);
     const Set::Scalar *dx = geom[lev].CellSize();
+
+    int agglom_volume_fraction = agglom.V / geom[0].ProbSize();
+
+    // I'm not sure if this is thread-safe. But I don't think it
+    // matters. @brunnels is this okay? If a prescribed agglom.V_0 is
+    // not configured, I want to set the prescribed agglomerate volume
+    // fraction based on the initial condition of the
+    // agglomerate. This helps me when I'm debugging/testing with
+    // random ICs.
+    if (time == 0.0 && std::isnan(agglom.V_0))
+    {
+        agglom.V_0 = agglom_volume_fraction;
+    }
+
     for (amrex::MFIter mfi(*agglom.alpha[lev], true); mfi.isValid(); ++mfi)
     {
         const amrex::Box &bx = mfi.tilebox();
@@ -142,8 +153,7 @@ Agglomeration::Advance(int lev, Set::Scalar time, Set::Scalar dt)
 
             if (agglom.kinetics_method == AgglomerationKinetics::ConstrainedAllenCahn)
                 // constrained Allen-Cahn equation
-                // TODO: actually update agglom.alpha_mean
-                alpha(i, j, k) = alpha_old(i, j, k) + dt * (-L * free_energy_derivative(i, j, k) + agglom.lambda * (agglom.alpha_mean - agglom.V_0));
+                alpha(i, j, k) = alpha_old(i, j, k) + dt * (-L * free_energy_derivative(i, j, k) + agglom.lambda * (agglom_volume_fraction - agglom.V_0));
             else if (agglom.kinetics_method == AgglomerationKinetics::CahnHilliard)
             {
                 // calculate the Laplacian of the variational derivative
@@ -176,5 +186,21 @@ Agglomeration::TagCellsForRefinement(int lev, amrex::TagBoxArray &a_tags, Set::S
                 tags(i, j, k) = amrex::TagBox::SET;
         });
     }
+}
+
+void
+Agglomeration::Integrate(int amrlev, Set::Scalar time, int step, const amrex::MFIter &mfi, const amrex::Box &box)
+{
+    Flame::Integrate(amrlev, time, step, mfi, box);
+
+    if (agglom.kinetics_method != AgglomerationKinetics::ConstrainedAllenCahn)
+        return;
+
+    const Set::Scalar *dx = geom[amrlev].CellSize();
+    Set::Scalar dv = AMREX_D_TERM(dx[0], *dx[1], *dx[2]);
+    Set::Patch<const Set::Scalar> alpha = agglom.alpha.Patch(amrlev, mfi);
+    amrex::ParallelFor(box, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
+        agglom.V += alpha(i, j, k, 0) * dv;
+    });
 }
 }
