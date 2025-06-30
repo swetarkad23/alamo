@@ -95,7 +95,6 @@ Flame::Parse(Flame &value, IO::ParmParse &pp)
     //
     // PHASE FIELD VARIABLES
     //
-
     pp_query_default("pf.eps", value.pf.eps, 0.0);       // Burn width thickness
     pp_query_default("pf.kappa", value.pf.kappa, 0.0);   // Interface energy param
     pp_query_default("pf.lambda", value.pf.lambda, 0.0); // Chemical potential multiplier
@@ -125,7 +124,6 @@ Flame::Parse(Flame &value, IO::ParmParse &pp)
 
     if (value.thermal.on)
     {
-
         // Used to change heat flux units
         pp_query_default("thermal.hc", value.thermal.hc, 1.0);
         // System AP mass fraction
@@ -139,14 +137,12 @@ Flame::Parse(Flame &value, IO::ParmParse &pp)
 
         value.RegisterNewFab(value.temp_mf, value.bc_temp, 1, 3, "temp", true);
         value.RegisterNewFab(value.temp_old_mf, value.bc_temp, 1, 3, "temp_old", false);
-        value.RegisterNewFab(value.temps_mf, value.bc_temp, 1, 3, "temps", false);
-        value.RegisterNewFab(value.temps_old_mf, value.bc_temp, 1, 3, "temps_old", false);
+        value.RegisterNewFab(value.temps_mf, value.bc_temp, 1, 0, "temps", false);
 
-        value.RegisterNewFab(value.mdot_mf, value.bc_temp, 1, 3, "mdot", value.plot_field);
-        value.RegisterNewFab(value.mob_mf, value.bc_temp, 1, 3, "mob", value.plot_field);
-        value.RegisterNewFab(value.alpha_mf, value.bc_temp, 1, 3, "alpha", value.plot_field);
-        value.RegisterNewFab(value.heatflux_mf, value.bc_temp, 1, 3, "heatflux", value.plot_field);
-        value.RegisterNewFab(value.laser_mf, value.bc_temp, 1, 3, "laser", value.plot_field);
+        value.RegisterNewFab(value.mdot_mf, value.bc_temp, 1, 0, "mdot", value.plot_field);
+        value.RegisterNewFab(value.alpha_mf, value.bc_temp, 1, 0, "alpha", value.plot_field);
+        value.RegisterNewFab(value.heatflux_mf, value.bc_temp, 1, 0, "heatflux", value.plot_field);
+        value.RegisterNewFab(value.laser_mf, value.bc_temp, 1, 0, "laser", value.plot_field);
 
         value.RegisterIntegratedVariable(&value.chamber.volume, "volume");
         value.RegisterIntegratedVariable(&value.chamber.area, "area");
@@ -171,7 +167,7 @@ Flame::Parse(Flame &value, IO::ParmParse &pp)
     // Refinement criterion for temperature field
     pp_query_default("amr.refinement_criterion_temp", value.t_refinement_criterion, 0.001);
 
-    // Eta value to restrict the refinament for the temperature field
+    // Eta value to restrict the refinement for the temperature field
     pp_query_default("amr.refinament_restriction", value.t_refinement_restriction, 0.1);
 
     // Refinement criterion for phi field [infinity]
@@ -194,7 +190,7 @@ Flame::Parse(Flame &value, IO::ParmParse &pp)
     // Phi refinement criteria
     pp_query_default("elastic.phirefinement", value.elastic.phirefinement, 1);
 
-    pp.queryclass<Base::Mechanics<model_type> >("elastic", value);
+    pp.queryclass<Base::Mechanics<model_type>>("elastic", value);
 
     if (value.m_type != Type::Disable)
     {
@@ -237,7 +233,8 @@ void Flame::Initialize(int lev)
     {
         rhs_mf[lev]->setVal(Set::Vector::Zero());
     }
-    if (thermal.on) {
+    if (thermal.on)
+    {
         if (thermal.ic_temp)
         {
             thermal.ic_temp->Initialize(lev, temp_mf);
@@ -342,7 +339,7 @@ void Flame::TimeStepComplete(Set::Scalar /*a_time*/, int /*a_iter*/)
     {
         // Set::Scalar x_len = geom[0].ProbDomain().length(0);
         // Set::Scalar y_len = geom[0].ProbDomain().length(1);
-        //  Set::Scalar domain_area = x_len * y_len;
+        // Set::Scalar domain_area = x_len * y_len;
         Util::Message(INFO, "Mass = ", chamber.massflux);
         Util::Message(INFO, "Pressure = ", chamber.pressure);
     }
@@ -372,7 +369,6 @@ void Flame::Advance(int lev, Set::Scalar time, Set::Scalar dt)
         }
         elastic.traction = chamber.pressure;
     }
-
 
     //
     // Multi-well chemical potential
@@ -422,7 +418,6 @@ void Flame::Advance(int lev, Set::Scalar time, Set::Scalar dt)
             //
             // EVOLVE PHASE FIELD (ETA)
             //
-
             Set::Scalar eta_lap = Numeric::Laplacian(eta, i, j, k, 0, DX);
             Set::Scalar df_deta = ((pf.lambda / pf.eps) * dw(eta(i, j, k)) - pf.eps * pf.kappa * eta_lap);
             etanew(i, j, k) = eta(i, j, k) - L * dt * df_deta;
@@ -434,23 +429,19 @@ void Flame::Advance(int lev, Set::Scalar time, Set::Scalar dt)
                 //
                 // Calculate thermal diffisivity and store for later gradient
                 //
-
                 alpha(i, j, k) = K / rho / cp;
 
                 //
                 // CALCULATE MASS FLUX BASED ON EVOLVING ETA
                 //
-
                 mdot(i, j, k) = rho * fabs(eta(i, j, k) - etanew(i, j, k)) / dt;
 
                 //
                 // CALCULATE HEAT FLUX BASED ON THE CALCULATED MASS FLUX
                 //
-
                 Set::Scalar q0 = propellant.get_qdot(mdot(i, j, k), phi_avg);
                 heatflux(i, j, k) = (thermal.hc * q0 + laser(i, j, k)) / K;
             }
-
         });
 
     } // MFi For loop
@@ -471,7 +462,6 @@ void Flame::Advance(int lev, Set::Scalar time, Set::Scalar dt)
             Set::Patch<const Set::Scalar> alpha = alpha_mf.Patch(lev, mfi);
 
             Set::Patch<Set::Scalar> temps = temps_mf.Patch(lev, mfi);
-
 
             // Phase field
             Set::Patch<Set::Scalar> etanew = (*eta_mf[lev]).array(mfi);
@@ -498,7 +488,7 @@ void Flame::Advance(int lev, Set::Scalar time, Set::Scalar dt)
             });
         }
     }
-} //Function
+} // Function
 
 void Flame::TagCellsForRefinement(int lev, amrex::TagBoxArray &a_tags, Set::Scalar time, int ngrow)
 {

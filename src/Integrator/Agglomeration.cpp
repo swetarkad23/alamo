@@ -61,6 +61,8 @@ Agglomeration::Parse(Agglomeration &value, IO::ParmParse &pp)
 
     // Regridding criterion
     pp.query_default("refinement_threshold", value.refinement_threshold, 1e100);
+    // Smallest non-zero value
+    pp.query_default("small", value.small, 1e-4);
 
     // Initial conditions for agglomerate order parameter
     pp.select_default<IC::Constant, IC::Expression, IC::BMP, IC::PNG, IC::Random, IC::BetaDistribution>("alpha.ic", value.agglom.alpha_ic, value.geom);

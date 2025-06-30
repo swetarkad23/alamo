@@ -114,6 +114,7 @@ private:
     } agglom;
 
     Set::Scalar refinement_threshold = NAN;
+    Set::Scalar small = NAN;
 };
 }
 #endif

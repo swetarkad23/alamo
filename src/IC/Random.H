@@ -13,10 +13,6 @@
 #include "AMReX_GpuQualifiers.H"
 #include "AMReX_Vector.H"
 
-#ifndef M_PI
-#define M_PI 3.14159265358979323846
-#endif
-
 namespace IC
 {
 /// Set each point to a random value.
@@ -25,9 +21,7 @@ class Random : public IC<Set::Scalar>
 public:
     static constexpr const char *name = "random";
 
-    Random(amrex::Vector<amrex::Geometry> &_geom, Set::Scalar a_mult) : IC(_geom), mult(a_mult)
-    {
-    }
+    Random(amrex::Vector<amrex::Geometry> &_geom, Set::Scalar a_mult) : IC(_geom), mult(a_mult) {}
     Random(amrex::Vector<amrex::Geometry> &_geom, IO::ParmParse &pp, std::string name) : IC(_geom)
     {
         pp.queryclass(name, *this);

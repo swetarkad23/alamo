@@ -144,7 +144,7 @@ gamma = 1e10
 kappa = 1e-12
 L_0 = 5e-11
 n = 5.0
-# lambda = 100
+lambda = 100
 
 # Agglomerate order parameter initial condition
 alpha.ic.type = betadistribution
@@ -163,3 +163,7 @@ alpha.bc.constant.val.xlo = 0.0
 alpha.bc.constant.val.xhi = 0.0
 alpha.bc.constant.val.ylo = 0.0
 alpha.bc.constant.val.yhi = 0.0
+
+# Miscellaneous agglomeration parameters
+refinement_threshold = 1e100
+small = 1e-4

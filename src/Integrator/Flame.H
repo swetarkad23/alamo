@@ -56,8 +56,6 @@ protected:
     void UpdateModel(int a_step, Set::Scalar a_time) override;
 
     Set::Field<Set::Scalar> eta_mf;
-
-    Set::Scalar small = NAN;
     Set::Field<Set::Scalar> phi_mf;
 
 private:
@@ -83,6 +81,7 @@ private:
     Set::Scalar m_refinement_criterion = NAN;
     Set::Scalar t_refinement_criterion = NAN;
     Set::Scalar t_refinement_restriction = NAN;
+    Set::Scalar small = NAN;
     IC::IC<Set::Scalar> *ic_eta = nullptr;
     bool plot_field = true;
     int variable_pressure = -1;
@@ -127,8 +126,6 @@ private:
         // Intensive variables
         Set::Scalar pressure = NAN;
     } chamber;
-
-    BC::BC<Set::Scalar> *bc_psi = nullptr;
 
     // Propellant model
     Model::Propellant::Propellant<
