@@ -33,11 +33,17 @@ stop_time = 5.0_s # [s]
 pf.eps = 0.00008_m # [m]
 pf.lambda = 0.001_J/m^2
 
-pf.eta.ic.type       = expression
-pf.eta.ic.expression.region0    = "1.0*(x > 0.05)"
+#pf.eta.ic.type       = expression
+#pf.eta.ic.expression.region0    = "1.0*(x > 0.05)"
 
-phi.ic.type          = expression
-phi.ic.expression.region0       = "1.0*(x > 0.05)"
+#phi.ic.type          = expression
+#phi.ic.expression.region0       = "1.0*(x > 0.05)"
+
+pf.eta.ic.type = expression
+pf.eta.ic.expression.region0 = "0.5 * erf(500*(x - 0.05)) + 0.5"
+
+phi.ic.type = expression
+phi.ic.expression.region0 = "1 * (x > 0.05)"
 
 
 pf.kappa = 1.0_J/m^2
@@ -65,7 +71,8 @@ pf.eta.bc.constant.val.yhi = 1.0
 #propellant.constant.L = 0
 
 propellant.type = homogenize
-propellant.homogenize.m_ap         = 1.45e5_cm/s #[???] cm/s
+#propellant.homogenize.m_ap         = 1.45e5_cm/s #[???] cm/s
+propellant.homogenize.m_ap         = 0.0000_cm/s #[???] cm/s
 propellant.homogenize.m_htpb       = 0.0000_cm/s #[???] cm/s
 propellant.homogenize.E_ap         = 9500.0_K  # Note that this is actually E/R 
 propellant.homogenize.E_htpb       = 0.0000_K #[???] K
@@ -108,8 +115,8 @@ temp.ic.constant.value=500_K #[K]
 
 # Laser source term
 laser.ic.type = constant
-laser.ic.constant.value = 5.0e6_kW/cm^2 #[ Units? ] kW/cm^2
-thermal.hc = 1.0e7_kW/m^2 # [ ???] This converts kW/cm^2 to W/m^2 (so units of (W cm^2) / ( kW m^2) )
+laser.ic.constant.value = 1.0e1_kW/m^2 #[ Units? ] kW/cm^2
+thermal.hc = 1.0e1_kW/m^2 # [ ???] This converts kW/cm^2 to W/m^2 (so units of (W cm^2) / ( kW m^2) )
 
 # Pressure
 variable_pressure = 1
