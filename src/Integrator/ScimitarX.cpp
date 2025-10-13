@@ -32,7 +32,9 @@ ScimitarX::ScimitarX() : Integrator()
     number_of_ghost_cells = 4;
     cflNumber = 0.5; // Set a reasonable default
     fourierNumber = 0.5; // Set a reasonable default
-    mu = 0.0; // Set a reasonable default
+    mu = 0.0; // Set a reasonable default -- dynamic viscosity
+    k_th = 0.0; // Thermal conductivity
+    R = 287.0; // specific Gas const.
     refinement_threshold = 0.01; // Default threshold
     
     // Initialize handlers with nullptr (will be set up later)
@@ -388,6 +390,7 @@ ScimitarX::Parse(ScimitarX& value, IO::ParmParse& pp)
  
                 value.bc_PVec = new BC::Constant(value.number_of_components, pp, "bc.pvec");
                 value.bc_Pressure = new BC::Constant(1, pp, "bc.pressure");
+             //   value.bc_Temperature = new BC::Constant(1, pp, "bc.temperature");
 
             } else {
                 Util::Abort(__FILE__, __func__, __LINE__, "Invalid SolverType: " + solverTypeStr);
@@ -409,8 +412,11 @@ ScimitarX::Parse(ScimitarX& value, IO::ParmParse& pp)
 #endif
         value.RegisterNewFab(value.PVec_mf, value.bc_PVec, value.number_of_components, value.number_of_ghost_cells, "PrimitiveVec", true, {}); 
         value.RegisterNewFab(value.Pressure_mf, value.bc_Pressure, 1, value.number_of_ghost_cells, "Pressure", true, {});
+        //value.RegisterNewFab(value.Temperature_mf, value.bc_Temperature, 1, value.number_of_ghost_cells, "Temperature", true, {});
 
-        value.RegisterNewFab(value.SourceTermVec, &value.bc_nothing, 5, value.number_of_ghost_cells, "SourceTermVec", true, {});
+        value.RegisterNewFab(value.ShearStress_mf, &value.bc_nothing, 6, value.number_of_ghost_cells, "ShearStress", true, {});
+        value.RegisterNewFab(value.GradShearStress_mf, &value.bc_nothing, 9, value.number_of_ghost_cells, "GradShearStress", false, {});
+        value.RegisterNewFab(value.SourceTermVec, &value.bc_nothing, 5, value.number_of_ghost_cells, "SourceTermVec", false, {});
     }
     
     // Initial Conditions
@@ -493,6 +499,8 @@ ScimitarX::Parse(ScimitarX& value, IO::ParmParse& pp)
     pp.query_required("cflNumber", value.cflNumber); // Read CFL number
     pp.query_default("fourierNumber", value.fourierNumber, 0.5); // Read Fourier Number (Default set to 0.5)
     pp.query_default("mu", value.mu, 0.0); // Read dynamic viscosity (Default set to 0 i.e. inviscid)
+    pp.query_default("k_th", value.k_th, 0.0); // Read thermal conductivity (Default set to 0 i.e. no heat conduction)
+    pp.query_default("R", value.R, 287.0); // Read specific gas constant (Default set to 287.0 i.e. air)
     
     // Add these to your Parse method
     pp.query_default("enable_density_refinement", value.enable_density_refinement, true); // enable density refinement
@@ -514,10 +522,13 @@ ScimitarX::Parse(ScimitarX& value, IO::ParmParse& pp)
 
 
 // Initialize the Primitive Variables and Pressure through Initial Condition.
+// Initialize the Temperature using Primitive Variables
 void ScimitarX::Initialize(int lev)
 {
     ic_PVec->Initialize(lev, PVec_mf);
     ic_Pressure->Initialize(lev, Pressure_mf);
+
+   // thermoHandler->ComputeTemperature(lev,this);
 
     ScimitarX::ComputeConservedVariables<SolverType::SolveCompressibleEuler>(lev);
     std::swap(*QVec_old_mf[lev], *QVec_mf[lev]); 
@@ -671,12 +682,11 @@ void ScimitarX::AdvanceInTimeWithoutStiffTerms(int lev, Set::Scalar time, Set::S
                 // 1. Compute Conserved Variables
                 ComputeConservedVariables<SolverType::SolveCompressibleEuler>(lev);
 
-                // 2. Perform flux reconstruction and compute fluxes in all directions
+                // 2. Perform flux reconstruction, compute fluxes in all directions
                 fluxHandler->ConstructFluxes(lev, this);
 
-                //ApplyBoundaryConditions(lev, time);
-                
                 // 3. Compute Viscous Terms and Source Term for viscous fluxes
+                sourceTermHandler->ComputeShearStress(lev, this);
                 sourceTermHandler->ComputeSourceTerm(lev, this);
 
                 // 4. Compute sub-step using the chosen time-stepping scheme
@@ -686,9 +696,10 @@ void ScimitarX::AdvanceInTimeWithoutStiffTerms(int lev, Set::Scalar time, Set::S
                 UpdateSolutions<SolverType::SolveCompressibleEuler>(lev);
 
 
-                //ApplyBoundaryConditions(lev, time);
+                ApplyBoundaryConditions(lev, time);
 
             }
+            sourceTermHandler->ComputeShearStress(lev, this);
             break;
         }
 
@@ -700,12 +711,13 @@ void ScimitarX::AdvanceInTimeWithoutStiffTerms(int lev, Set::Scalar time, Set::S
                 // 1. Compute Conserved Variables
                 ComputeConservedVariables<SolverType::SolveCompressibleEuler>(lev);
 
-                // 2. Perform flux reconstruction and compute fluxes in all directions
+                // 2. Perform flux reconstruction, compute fluxes in all directions
                 fluxHandler->ConstructFluxes(lev, this);
 
                 // 3. Compute Viscous Terms and Source Term for viscous fluxes
+                sourceTermHandler->ComputeShearStress(lev, this);
                 sourceTermHandler->ComputeSourceTerm(lev, this);
-                
+ 
                 // 4. Compute sub-step using the chosen time-stepping scheme
                 timeStepper->ComputeSubStep(lev, dt, stage, this);
 
@@ -715,6 +727,7 @@ void ScimitarX::AdvanceInTimeWithoutStiffTerms(int lev, Set::Scalar time, Set::S
                 ApplyBoundaryConditions(lev, time);
 
             }
+            sourceTermHandler->ComputeShearStress(lev, this);
             break;
         }
 
@@ -729,9 +742,13 @@ void ScimitarX::AdvanceInTimeWithoutStiffTerms(int lev, Set::Scalar time, Set::S
 void ScimitarX::ApplyBoundaryConditions(int lev, Set::Scalar time) {
         
         Integrator::ApplyPatch(lev, time, PVec_mf, *PVec_mf[lev], *bc_PVec, 0);        
-        Integrator:: ApplyPatch(lev, time, Pressure_mf, *Pressure_mf[lev], *bc_Pressure, 0); 
-        
+        Integrator::ApplyPatch(lev, time, Pressure_mf, *Pressure_mf[lev], *bc_Pressure, 0); 
+       // Integrator::ApplyPatch(lev, time, Temperature_mf, *Temperature_mf[lev], *bc_Temperature, 0); 
+ 
         Integrator::ApplyPatch(lev, time, QVec_mf, *QVec_mf[lev], bc_nothing, 0);        
+        Integrator::ApplyPatch(lev, time, ShearStress_mf, *ShearStress_mf[lev], bc_nothing, 0);        
+        Integrator::ApplyPatch(lev, time, GradShearStress_mf, *GradShearStress_mf[lev], bc_nothing, 0);        
+        Integrator::ApplyPatch(lev, time, SourceTermVec, *SourceTermVec[lev], bc_nothing, 0);        
 /*        
         Integrator::ApplyPatch(lev, time, XFlux_mf, *XFlux_mf[lev],bc_nothing, 0);        
         Integrator::ApplyPatch(lev, time, YFlux_mf, *YFlux_mf[lev], bc_nothing, 0);
@@ -800,10 +817,13 @@ Set::Scalar ScimitarX::GetTimeStep() {
 
                 // Compute local timestep for this cell
                 //
-                Set::Scalar SMALL = 1.0e-14;
+                const Set::Scalar SMALL = 1.0e-14;
                 Set::Scalar CFL = ScimitarX::cflNumber;                
                 Set::Scalar Fo = ScimitarX::fourierNumber;
-                Set::Scalar mu = ScimitarX::mu;                
+                Set::Scalar mu = ScimitarX::mu;
+                Set::Scalar k_th = ScimitarX::k_th;
+                Set::Scalar R = ScimitarX::R;
+                Set::Scalar Cp = (gamma*R) / (gamma-1.0);                
 
                 Set::Scalar dtLocal = CFL*dx[0] / maxSpeed; // since viscous effect doesn't exist in 1D flows
 #if (AMREX_SPACEDIM >= 2)
@@ -812,11 +832,18 @@ Set::Scalar ScimitarX::GetTimeStep() {
                     dtLocal = std::min(dtLocal, Fo*rho*dx[0]*dx[0] / mu);
                     dtLocal = std::min(dtLocal, Fo*rho*dx[1]*dx[1] / mu);
                 }
+                if (k_th > SMALL){
+                    dtLocal = std::min(dtLocal, Fo*rho*Cp*dx[0]*dx[0] / k_th);
+                    dtLocal = std::min(dtLocal, Fo*rho*Cp*dx[1]*dx[1] / k_th);
+                }
 #endif
 #if (AMREX_SPACEDIM == 3)
                 dtLocal = std::min(dtLocal, CFL*dx[2] / maxSpeed);
                 if (mu > SMALL){
                     dtLocal = std::min(dtLocal, Fo*rho*dx[2]*dx[2] / mu);
+                }
+                if (k_th > SMALL){
+                    dtLocal = std::min(dtLocal, Fo*rho*Cp*dx[2]*dx[2] / k_th);
                 }
 #endif
                 

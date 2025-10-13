@@ -397,7 +397,7 @@ protected:
 						    p_arr(i, j, k, variableIndex.IE) = internal_energy;
 
 						    pressure_arr(i, j, k) = pressure;  // Store pressure in Pressure_mf for post-processing
-
+                                                    
 
 				    });
 
@@ -416,6 +416,8 @@ protected:
 		    Set::Field<Set::Scalar> ZFlux_mf;         // Z-dir Flux Vector
 		    Set::Field<Set::Scalar> PVec_mf;          // Primitive variables
 		    Set::Field<Set::Scalar> Pressure_mf;      // Pressure variable
+		    Set::Field<Set::Scalar> ShearStress_mf;    // Shear Stress Multifab
+		    Set::Field<Set::Scalar> GradShearStress_mf;    // Gradient of Shear Stress MultiFab
 		    Set::Field<Set::Scalar> SourceTermVec;    // Source Term Vector
 
 		    // Core solver parameters
@@ -427,6 +429,8 @@ protected:
 		    Set::Scalar fourierNumber;                // Fourier number (read from input)
 		    Set::Scalar adjustableTimeStep;           // flag for CFL based timestep (from input)
 		    Set::Scalar timestep;
+		    Set::Scalar k_th;                         // thermal conductivity (read from input)
+		    Set::Scalar R;                            // specific Gas constant (read from input)
 
 		    Set::Scalar refinement_threshold;         // Threshold for AMR refinement
 
